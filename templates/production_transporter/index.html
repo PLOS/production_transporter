@@ -1,0 +1,22 @@
+{% extends "admin/core/base.html" %}
+{% load foundation %}
+
+{% block page_title %}Production Transporter Admin{% endblock page_title %}
+{% block title %}Production Transporter Admin{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="content">
+            <div class="row expanded">
+                <div class="large-6 columns">
+                    <p>You can enable the Production Transporter for this journal and set the email address that will be notified when articles are deposited.</p>
+                    <form method="POST">
+                        {% csrf_token %}
+                        {{ manager_form|foundation }}
+                        <button class="button success" type="submit">Save</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock body %}

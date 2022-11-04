@@ -1,0 +1,92 @@
+[
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "When enabled the article will automatically be deposited on acceptance.",
+      "is_translatable": false,
+      "name": "enable_transport",
+      "pretty_name": "Enable Transport",
+      "type": "boolean"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Contact email address of production manager.",
+      "is_translatable": false,
+      "name": "transport_production_manager",
+      "pretty_name": "Production Manager Email",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Email template, sent to production manager when an article is transported.",
+      "is_translatable": false,
+      "name": "transport_email_production_manager",
+      "pretty_name": "Production Manager Email Template",
+      "type": "rich-text"
+    },
+    "value": {
+      "default": "<p>A new article, {{ article.title|safe }}, has been accepted in the journal {{ journal.name }}.</p><p>A JATS XML stub and all of this article's files have been deposited via FTP.</p>"
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "FTP sever address",
+      "is_translatable": false,
+      "name": "transport_ftp_address",
+      "pretty_name": "FTP Server Address",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "FTP server username.",
+      "is_translatable": false,
+      "name": "transport_ftp_username",
+      "pretty_name": "FTP Server Username",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "FTP server password. Will not show once saved.",
+      "is_translatable": false,
+      "name": "transport_ftp_password",
+      "pretty_name": "FTP Server Password",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  }
+]

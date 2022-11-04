@@ -1,0 +1,59 @@
+{% extends "admin/core/base.html" %}
+{% load foundation %}
+
+{% block page_title %}Production Transporter Articles{% endblock page_title %}
+{% block title %}Production Transporter Articles{% endblock %}
+
+{% block breadcrumbs %}
+    {{ block.super }}
+    <li>Articles in Production Transporter Stage</li>
+{% endblock %}
+
+{% block body %}
+    <div class="box">
+        <div class="content">
+            <div class="row expanded">
+                <div class="large-12 columns">
+                    <div class="title-area">
+                        <h2>Articles in Production Transporter</h2>
+                    </div>
+                    <div class="content">
+                        <table class="table small" id="articles_in_production_transporter">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th style="width: 25%">Title</th>
+                                <th>Submitted</th>
+                                <th>Main Author</th>
+                                <th>Editors</th>
+                                <th>Section</th>
+                                <th>Projected Issue
+                                <th>View Article Details</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for article in articles_in_stage %}
+                                <tr>
+                                    <td>{{ article.pk }}</td>
+                                    <td>{{ article.title }}</td>
+                                    <td>{{ article.date_submitted }}</td>
+                                    <td>{{ article.correspondence_author.full_name }}</td>
+                                    <td>{% for editor in article.editors %}{{ editor.editor.full_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</td>
+                                    <td>{{ article.section.name }}</td>
+                                    <td>{% if article.projected_issue %}
+                                        {{ article.projected_issue.display_title }}{% else %}None{% endif %}</td>
+                                    <td><a href="{% url 'manage_archive_article' article.pk %}" class="small button">Article Details</a></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td>No articles in this stage</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock body %}
