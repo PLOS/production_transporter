@@ -16,6 +16,7 @@ HANDSHAKE_URL = 'production_transporter_handshake_url'
 JUMP_URL = 'production_transporter_handshake_url'
 ARTICLE_PK_IN_HANDSHAKE_URL = False
 STAGE = 'production_transporter'
+KANBAN_CARD = 'production_transporter/elements/card.html'
 
 
 class ProductionTransporterPlugin(plugins.Plugin):
