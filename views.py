@@ -36,6 +36,10 @@ def index(request):
         {
             'name': 'transport_ftp_password',
             'object': setting_handler.get_setting('plugin', 'transport_ftp_password', request.journal),
+        },
+        {
+            'name': 'transport_ftp_remote_path',
+            'object': setting_handler.get_setting('plugin', 'transport_ftp_remote_path', request.journal),
         }
     ]
     setting_group = 'plugin'

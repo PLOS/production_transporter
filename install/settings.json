@@ -88,5 +88,20 @@
     "value": {
       "default": ""
     }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Path on the remote server.",
+      "is_translatable": false,
+      "name": "transport_ftp_remote_path",
+      "pretty_name": "FTP Server Remote Path",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
   }
 ]

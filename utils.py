@@ -37,8 +37,13 @@ def get_ftp_details(journal):
         'transport_ftp_password',
         journal,
     ).processed_value
+    ftp_remote_directory = setting_handler.get_setting(
+        'plugin',
+        'transport_ftp_remote_path',
+        journal,
+    ).processed_value
 
-    return ftp_server, ftp_username, ftp_password
+    return ftp_server, ftp_username, ftp_password, ftp_remote_directory
 
 
 def on_article_accepted(**kwargs):
@@ -82,7 +87,7 @@ def on_article_accepted(**kwargs):
     )
 
     # Get FTP details
-    ftp_server, ftp_username, ftp_password = get_ftp_details(
+    ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(
         request.journal,
     )
     if not ftp_server or not ftp_username or not ftp_password:
@@ -97,6 +102,7 @@ def on_article_accepted(**kwargs):
         ftp_server=ftp_server,
         ftp_username=ftp_username,
         ftp_password=ftp_password,
+        remote_path=ftp_remote_directory,
         file_path=zipped_deposit_folder,
     )
 
