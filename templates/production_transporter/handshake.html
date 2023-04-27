@@ -28,7 +28,9 @@
                                 <th>Editors</th>
                                 <th>Section</th>
                                 <th>Projected Issue
-                                <th>View Article Details</th>
+                                <th>Send to FTP</th>
+                                <th>Download</th>
+                                <th>View</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -42,6 +44,8 @@
                                     <td>{{ article.section.name }}</td>
                                     <td>{% if article.projected_issue %}
                                         {{ article.projected_issue.display_title }}{% else %}None{% endif %}</td>
+                                    <td><form method="POST">{% csrf_token %}<button class="button" name="ftp" value="{{ article.pk }}"><span class="fa fa-upload"></span></button></form></td>
+                                    <td><form method="POST">{% csrf_token %}<button class="button" name="download" value="{{ article.pk }}"><span class="fa fa-download"></span></button></form></td>
                                     <td><a href="{% url 'manage_archive_article' article.pk %}" class="small button">Article Details</a></td>
                                 </tr>
                                 {% empty %}

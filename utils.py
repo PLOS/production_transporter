@@ -4,13 +4,21 @@ from janeway_ftp import ftp, helpers as deposit_helpers
 
 from utils import setting_handler, notify_helpers, render_template
 from core import models
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
-def copy_all_article_files(article, temp_deposit_folder):
-    files = models.File.objects.filter(
-        article_id=article.pk,
+def copy_article_files(article, temp_deposit_folder):
+    files_to_copy = []
+    latest_manuscript_file = article.manuscript_files.all().latest(
+        'date_uploaded'
     )
-    for file in files:
+    files_to_copy.append(latest_manuscript_file)
+    for file in article.data_figure_files.all():
+        files_to_copy.append(file)
+
+    for file in files_to_copy:
         try:
             deposit_helpers.copy_file(
                 article,
@@ -46,6 +54,33 @@ def get_ftp_details(journal):
     return ftp_server, ftp_username, ftp_password, ftp_remote_directory
 
 
+def prep_zip_folder(request, article):
+    # Create a temp folder
+    temp_deposit_folder, folder_string = deposit_helpers.prepare_temp_folder(
+        request=request,
+        article=article,
+    )
+
+    # Generate JATS stub
+    deposit_helpers.generate_jats_metadata(
+        article=article,
+        article_folder=temp_deposit_folder,
+    )
+
+    # Copy all files into folder
+    copy_article_files(
+        article=article,
+        temp_deposit_folder=temp_deposit_folder,
+    )
+
+    # Zip Folder
+    zipped_deposit_folder = deposit_helpers.zip_temp_folder(
+        temp_folder=temp_deposit_folder,
+    )
+
+    return zipped_deposit_folder, folder_string
+
+
 def on_article_accepted(**kwargs):
     request = kwargs.get('request')
     article = kwargs.get('article')
@@ -63,27 +98,9 @@ def on_article_accepted(**kwargs):
         )
         return
 
-    # Create a temp folder
-    temp_deposit_folder, folder_string = deposit_helpers.prepare_temp_folder(
-        request=request,
-        article=article,
-    )
-
-    # Generate JATS stub
-    deposit_helpers.generate_jats_metadata(
-        article=article,
-        article_folder=temp_deposit_folder,
-    )
-
-    # Copy all files into folder
-    copy_all_article_files(
-        article=article,
-        temp_deposit_folder=temp_deposit_folder,
-    )
-
-    # Zip Folder
-    zipped_deposit_folder = deposit_helpers.zip_temp_folder(
-        temp_folder=temp_deposit_folder,
+    zipped_deposit_folder, folder_string = prep_zip_folder(
+        request,
+        article,
     )
 
     # Get FTP details
@@ -97,14 +114,17 @@ def on_article_accepted(**kwargs):
             'Article not sent to production, FTP details not provided.',
         )
 
-    # FTP the zip to remote
-    ftp.send_file_via_ftp(
-        ftp_server=ftp_server,
-        ftp_username=ftp_username,
-        ftp_password=ftp_password,
-        remote_path=ftp_remote_directory,
-        file_path=zipped_deposit_folder,
-    )
+    try:
+        # FTP the zip to remote
+        ftp.send_file_via_ftp(
+            ftp_server=ftp_server,
+            ftp_username=ftp_username,
+            ftp_password=ftp_password,
+            remote_path=ftp_remote_directory,
+            file_path=zipped_deposit_folder,
+        )
+    except Exception as e:
+        logger.error(e)
 
     # Notify production email address
     notification_context = {

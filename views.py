@@ -1,9 +1,11 @@
-from django.shortcuts import render, redirect, reverse
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 
-from plugins.production_transporter import plugin_settings
-from core import forms
+from janeway_ftp import ftp
+
+from plugins.production_transporter import plugin_settings, utils as pt_utils
+from core import forms, files
 from submission import models
 from utils import setting_handler
 from security.decorators import has_journal, any_editor_user_required
@@ -82,6 +84,45 @@ def handshake_url(request):
         stage=plugin_settings.STAGE,
     )
     template = 'production_transporter/handshake.html'
+
+    if request.POST:
+        if 'download' in request.POST:
+            article_pk = request.POST.get('download')
+            article = get_object_or_404(
+                models.Article,
+                pk=article_pk,
+                journal=request.journal,
+            )
+            zipped_folder_path, folder_string = pt_utils.prep_zip_folder(
+                request,
+                article,
+            )
+            return files.serve_temp_file(
+                zipped_folder_path,
+                f"{folder_string}.zip",
+            )
+        if 'ftp' in request.POST:
+            article_pk = request.POST.get('ftp')
+            article = get_object_or_404(
+                models.Article,
+                pk=article_pk,
+                journal=request.journal,
+            )
+            zipped_folder_path, folder_string = pt_utils.prep_zip_folder(
+                request,
+                article,
+            )
+            ftp_server, ftp_username, ftp_password, ftp_remote_directory = pt_utils.get_ftp_details(
+                request.journal,
+            )
+            ftp.send_file_via_ftp(
+                ftp_server=ftp_server,
+                ftp_username=ftp_username,
+                ftp_password=ftp_password,
+                remote_path=ftp_remote_directory,
+                file_path=zipped_folder_path,
+            )
+
     context = {
         'articles_in_stage': articles_in_stage,
     }

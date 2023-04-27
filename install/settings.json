@@ -41,7 +41,7 @@
       "type": "rich-text"
     },
     "value": {
-      "default": "<p>A new article, {{ article.title|safe }}, has been accepted in the journal {{ journal.name }}.</p><p>A JATS XML stub and all of this article's files have been deposited via FTP.</p>"
+      "default": "<p>A new article, {{ article.title|safe }}, has been accepted in the journal {{ journal.name }}.</p><p>A JATS XML stub and all of this article's files have been deposited via FTP.</p><p>Article editors are listed below:<br></p><p>{% for editor in article.editor_list %}</p><p>{{ editor.full_name }}, {{ editor.email }}</p>{% endfor %}"
     }
   },
   {
