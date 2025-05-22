@@ -5,6 +5,7 @@ from janeway_ftp import ftp, helpers as deposit_helpers
 from utils import setting_handler, notify_helpers, render_template
 from core import models
 from utils.logger import get_logger
+from submission import models as submission_models
 
 logger = get_logger(__name__)
 
@@ -80,10 +81,7 @@ def prep_zip_folder(request, article):
 
     return zipped_deposit_folder, folder_string
 
-
-def on_article_accepted(**kwargs):
-    request = kwargs.get('request')
-    article = kwargs.get('article')
+def collect_and_send_article(request, article):
     transport_enabled = setting_handler.get_setting(
         'plugin',
         'enable_transport',
@@ -162,4 +160,36 @@ def on_article_accepted(**kwargs):
             messages.WARNING,
             'No production contact set in the Production Transporter plugin.',
         )
+
+def get_ftp_submission_stage(journal):
+    submission_stage = setting_handler.get_setting(
+        'plugin',
+        'transport_production_stage',
+        journal,
+    ).processed_value
+
+    if not submission_stage:
+        return submission_models.STAGE_ACCEPTED
+    else:
+        return submission_stage
+
+def on_article_stage(kwargs, stage):
+    request = kwargs.get('request')
+    submission_stage = get_ftp_submission_stage(request.journal)
+    if submission_stage != stage:
+        return
+
+    article = kwargs.get('article')
+    collect_and_send_article(request, article)
+
+def on_article_accepted(**kwargs):
+    on_article_stage(kwargs, submission_models.STAGE_ACCEPTED)
+
+def on_article_submitted(**kwargs):
+    on_article_stage(kwargs, submission_models.STAGE_UNASSIGNED)
+
+def on_article_published(**kwargs):
+    on_article_stage(kwargs, submission_models.STAGE_PUBLISHED)
+
+
 
