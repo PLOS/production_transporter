@@ -9,6 +9,7 @@ from core import forms, files
 from submission import models
 from utils import setting_handler
 from security.decorators import has_journal, any_editor_user_required
+from submission import models as submission_models
 
 
 @has_journal
@@ -18,6 +19,15 @@ def index(request):
         {
             'name': 'enable_transport',
             'object': setting_handler.get_setting('plugin', 'enable_transport', request.journal),
+        },
+        {
+            'name': 'transport_production_stage',
+            'object': setting_handler.get_setting('plugin', 'transport_production_stage', request.journal),
+            'choices': [
+                [submission_models.STAGE_ACCEPTED,'Accepted'],
+                [submission_models.STAGE_UNASSIGNED,'Submitted'],
+                [submission_models.STAGE_PUBLISHED,'Published']
+            ]
         },
         {
             'name': 'transport_production_manager',

@@ -19,6 +19,21 @@
       "name": "plugin"
     },
     "setting": {
+      "description": "Which stage to use when sending files to the FTP server.",
+      "is_translatable": false,
+      "name": "transport_production_stage",
+      "pretty_name": "Production Manager Stage",
+      "type": "select"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
       "description": "Contact email address of production manager.",
       "is_translatable": false,
       "name": "transport_production_manager",
