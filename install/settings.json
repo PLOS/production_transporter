@@ -19,7 +19,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Which stage to use when sending files to the FTP server.",
+      "description": "Defines the stage which triggers depositing the article into the FTP server. The article is deposited upon entering the chosen stage.",
       "is_translatable": false,
       "name": "transport_production_stage",
       "pretty_name": "Production Manager Stage",
