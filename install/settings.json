@@ -4,7 +4,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "When enabled the article will automatically be deposited on acceptance.",
+      "description": "When enabled the article will automatically be deposited on the stage set by \"Production Manager Stage\".",
       "is_translatable": false,
       "name": "enable_transport",
       "pretty_name": "Enable Transport",
@@ -26,7 +26,7 @@
       "type": "select"
     },
     "value": {
-      "default": ""
+      "default": "Accepted"
     }
   },
   {
