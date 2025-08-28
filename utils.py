@@ -1,3 +1,4 @@
+import importlib
 from django.contrib import messages
 
 from janeway_ftp import ftp, helpers as deposit_helpers
@@ -81,6 +82,17 @@ def prep_zip_folder(request, article):
 
     return zipped_deposit_folder, folder_string
 
+def call_transfer_file_function(article_id, function_path):
+    """
+    Dynamically imports and calls a function to get the file path to transfer for an article.
+    function_path: str, e.g. 'plugins.production_transporter.utils.createFileToTransfer'
+    Returns the file path as a string.
+    """
+    module_name, func_name = function_path.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    func = getattr(module, func_name)
+    return func(article_id)
+
 def collect_and_send_article(request, article):
     transport_enabled = setting_handler.get_setting(
         'plugin',
@@ -96,10 +108,41 @@ def collect_and_send_article(request, article):
         )
         return
 
-    zipped_deposit_folder, folder_string = prep_zip_folder(
-        request,
-        article,
-    )
+    # Determine transfer method
+    transfer_method = setting_handler.get_setting(
+        "plugin",
+        "transfer_method_type",
+        request.journal,
+    ).processed_value
+
+    file_to_send = None
+    folder_string = None
+
+    if transfer_method == "File Transfer Protocol":
+        function_path = setting_handler.get_setting(
+            "plugin", "file_transfer_function", request.journal
+        ).processed_value
+        if function_path:
+            try:
+                file_to_send = call_transfer_file_function(
+                    str(article.pk), function_path
+                )
+                logger.info(
+                    f"Custom file transfer function '{function_path}' executed successfully. ${file_to_send}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Error calling file transfer function '{function_path}': {e}"
+                )
+                messages.add_message(
+                    request,
+                    messages.WARNING,
+                    f"Custom file transfer function failed: {e}. Using default zip.",
+                )
+        if not file_to_send:
+            file_to_send, folder_string = prep_zip_folder(request, article)
+    else:
+        file_to_send, folder_string = prep_zip_folder(request, article)
 
     # Get FTP details
     ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(
@@ -113,13 +156,13 @@ def collect_and_send_article(request, article):
         )
 
     try:
-        # FTP the zip to remote
+        # FTP the file(s) to remote
         ftp.send_file_via_ftp(
             ftp_server=ftp_server,
             ftp_username=ftp_username,
             ftp_password=ftp_password,
             remote_path=ftp_remote_directory,
-            file_path=zipped_deposit_folder,
+            file_path=file_to_send,
         )
     except Exception as e:
         logger.error(e)

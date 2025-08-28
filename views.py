@@ -15,6 +15,7 @@ from submission import models as submission_models
 @has_journal
 @staff_member_required
 def index(request):
+    transport_custom_files_value = setting_handler.get_setting('plugin', 'transport_custom_files', request.journal)
     settings = [
         {
             'name': 'enable_transport',
@@ -52,6 +53,22 @@ def index(request):
         {
             'name': 'transport_ftp_remote_path',
             'object': setting_handler.get_setting('plugin', 'transport_ftp_remote_path', request.journal),
+        },
+        {
+            'name': 'transport_custom_files',
+            'object': transport_custom_files_value,
+        },
+        {
+            'name': 'transfer_method_type',
+            'object': setting_handler.get_setting('plugin', 'transfer_method_type', request.journal),
+            'choices': [
+                ["File Transfer Protocol", "File Transfer Protocol"],
+                ["JSON Body", "JSON Body"]],
+            'disabled': True, # REMOVE BEFORE MERGE IF NOT DISABLED
+        },
+        {
+            'name': 'file_transfer_function',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_function', request.journal),
         }
     ]
     setting_group = 'plugin'

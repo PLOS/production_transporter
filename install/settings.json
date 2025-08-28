@@ -118,5 +118,50 @@
     "value": {
       "default": ""
     }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "When enabled the article will automatically be transfered via the method set in \"Production Transfer Type\".",
+      "is_translatable": false,
+      "name": "transport_custom_files",
+      "pretty_name": "Transport Custom Files",
+      "type": "boolean"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Defines the method of file transfer.",
+      "is_translatable": false,
+      "name": "transfer_method_type",
+      "pretty_name": "Production Transfer Type",
+      "type": "select"
+    },
+    "value": {
+      "default": "File Transfer Protocol"
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function that returns the file path to transfer, given an article ID. Example: 'plugins.production_transporter.utils.createFileToTransfer'. The function must accept a single argument (article_id: str) and return a string file path.",
+      "is_translatable": false,
+      "name": "file_transfer_function",
+      "pretty_name": "File Transfer Function",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
   }
 ]
