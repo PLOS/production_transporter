@@ -88,8 +88,8 @@ def index(request):
             'required': True
         },
         {
-            'name': 'enable_go_file_sending',
-            'object': setting_handler.get_setting('plugin', 'enable_go_file_sending', request.journal),
+            'name': 'enable_file_transfer_go_xml',
+            'object': setting_handler.get_setting('plugin', 'enable_file_transfer_go_xml', request.journal),
             'enables': [
                 'file_transfer_go_function',
                 'file_transfer_go_success_callback',

@@ -127,7 +127,7 @@ def collect_and_send_article(request, article):
     ).processed_value
 
     go_enabled = setting_handler.get_setting( 
-        "plugin", "enable_go_file_sending", request.journal 
+        "plugin", "enable_file_transfer_go_xml", request.journal 
     ).processed_value
 
     go_function_path = setting_handler.get_setting( 

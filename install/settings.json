@@ -201,7 +201,7 @@
     "setting": {
       "description": "Enable sending of .go.xml file.",
       "is_translatable": false,
-      "name": "enable_go_file_sending",
+      "name": "enable_file_transfer_go_xml",
       "pretty_name": "Enable .go.xml File Sending",
       "type": "boolean"
     },
