@@ -123,7 +123,7 @@ def collect_and_send_article(request, article):
     ).processed_value
 
     zip_failure_callback_path = setting_handler.get_setting( 
-        "plugin", "file_transfer_zip_error_callback", request.journal # standardize name with FAILURE rather than ERROR
+        "plugin", "file_transfer_zip_failure_callback", request.journal
     ).processed_value
 
     go_enabled = setting_handler.get_setting( 
@@ -139,7 +139,7 @@ def collect_and_send_article(request, article):
     ).processed_value
 
     go_failure_callback_path = setting_handler.get_setting( 
-        "plugin", "file_transfer_go_error_callback", request.journal # standardize name with FAILURE rather than ERROR
+        "plugin", "file_transfer_go_failure_callback", request.journal
     ).processed_value
 
     file_to_send = None

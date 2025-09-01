@@ -61,7 +61,7 @@ def index(request):
                 "transfer_method_type",
                 'file_transfer_zip_function',
                 'file_transfer_zip_success_callback',
-                'file_transfer_zip_error_callback',
+                'file_transfer_zip_failure_callback',
             ],
             'enables_when': True
         },
@@ -83,8 +83,8 @@ def index(request):
             'required': True
         },
         {
-            'name': 'file_transfer_zip_error_callback',
-            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_error_callback', request.journal),
+            'name': 'file_transfer_zip_failure_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_failure_callback', request.journal),
             'required': True
         },
         {
@@ -93,7 +93,7 @@ def index(request):
             'enables': [
                 'file_transfer_go_function',
                 'file_transfer_go_success_callback',
-                'file_transfer_go_error_callback',
+                'file_transfer_go_failure_callback',
             ],
             'enables_when': True
         },
@@ -108,8 +108,8 @@ def index(request):
             'required': True
         },
         {
-            'name': 'file_transfer_go_error_callback',
-            'object': setting_handler.get_setting('plugin', 'file_transfer_go_error_callback', request.journal),
+            'name': 'file_transfer_go_failure_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_go_failure_callback', request.journal),
             'required': True
         }
     ]

@@ -186,7 +186,7 @@
     "setting": {
       "description": "Python import path to a function called on error during .zip transfer.",
       "is_translatable": false,
-      "name": "file_transfer_zip_error_callback",
+      "name": "file_transfer_zip_failure_callback",
       "pretty_name": "File Transfer .zip Error Callback",
       "type": "char"
     },
@@ -246,7 +246,7 @@
     "setting": {
       "description": "Python import path to a function called on error during .go.xml transfer.",
       "is_translatable": false,
-      "name": "file_transfer_go_error_callback",
+      "name": "file_transfer_go_failure_callback",
       "pretty_name": "File Transfer .go.xml Error Callback",
       "type": "char"
     },
