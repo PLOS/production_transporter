@@ -75,14 +75,17 @@ def index(request):
         {
             'name': 'file_transfer_zip_function',
             'object': setting_handler.get_setting('plugin', 'file_transfer_zip_function', request.journal),
+            'required': True
         },
         {
             'name': 'file_transfer_zip_success_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_zip_success_callback', request.journal),
+            'required': True
         },
         {
             'name': 'file_transfer_zip_error_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_zip_error_callback', request.journal),
+            'required': True
         },
         {
             'name': 'enable_go_file_sending',
@@ -97,14 +100,17 @@ def index(request):
         {
             'name': 'file_transfer_go_function',
             'object': setting_handler.get_setting('plugin', 'file_transfer_go_function', request.journal),
+            'required': True
         },           
         {
             'name': 'file_transfer_go_success_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_go_success_callback', request.journal),
+            'required': True
         },
         {
             'name': 'file_transfer_go_error_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_go_error_callback', request.journal),
+            'required': True
         }
     ]
 
