@@ -108,39 +108,82 @@ def collect_and_send_article(request, article):
         )
         return
 
-    # Determine transfer method
     transfer_method = setting_handler.get_setting(
         "plugin",
         "transfer_method_type",
         request.journal,
     ).processed_value
 
+    zip_function_path = setting_handler.get_setting(
+        "plugin", "file_transfer_zip_function", request.journal
+    ).processed_value
+
+    zip_success_callback_path = setting_handler.get_setting( 
+        "plugin", "file_transfer_zip_success_callback", request.journal 
+    ).processed_value
+
+    zip_failure_callback_path = setting_handler.get_setting( 
+        "plugin", "file_transfer_zip_error_callback", request.journal # standardize name with FAILURE rather than ERROR
+    ).processed_value
+
+    go_enabled = setting_handler.get_setting( 
+        "plugin", "enable_go_file_sending", request.journal 
+    ).processed_value
+
+    go_function_path = setting_handler.get_setting( 
+        "plugin", "file_transfer_go_function", request.journal 
+    ).processed_value
+
+    go_success_callback_path = setting_handler.get_setting( 
+        "plugin", "file_transfer_go_success_callback", request.journal 
+    ).processed_value
+
+    go_failure_callback_path = setting_handler.get_setting( 
+        "plugin", "file_transfer_go_error_callback", request.journal # standardize name with FAILURE rather than ERROR
+    ).processed_value
+
     file_to_send = None
     folder_string = None
 
     if transfer_method == "File Transfer Protocol":
-        function_path = setting_handler.get_setting(
-            "plugin", "file_transfer_function", request.journal
-        ).processed_value
-        if function_path:
+        if zip_function_path and zip_success_callback_path and zip_failure_callback_path:
             try:
                 file_to_send = call_transfer_file_function(
-                    str(article.pk), function_path
+                    str(article.pk), zip_function_path
                 )
-                logger.info(
-                    f"Custom file transfer function '{function_path}' executed successfully. ${file_to_send}"
-                )
+                if file_to_send:
+                    call_transfer_file_function(
+                        str(article.pk), zip_success_callback_path
+                    )
+                else:    
+                    call_transfer_file_function(
+                        str(article.pk), zip_failure_callback_path
+                    )
             except Exception as e:
-                logger.error(
-                    f"Error calling file transfer function '{function_path}': {e}"
-                )
                 messages.add_message(
                     request,
                     messages.WARNING,
-                    f"Custom file transfer function failed: {e}. Using default zip.",
+                    f"Custom file transfer for .zip failed: {e}",
                 )
-        if not file_to_send:
-            file_to_send, folder_string = prep_zip_folder(request, article)
+        if go_enabled and go_function_path and go_success_callback_path and go_failure_callback_path:
+            try:
+                file_to_send = call_transfer_file_function(
+                    str(article.pk), go_function_path
+                )
+                if file_to_send:
+                    call_transfer_file_function(
+                        str(article.pk), go_success_callback_path
+                    )
+                else:    
+                    call_transfer_file_function(
+                        str(article.pk), go_failure_callback_path
+                    )
+            except Exception as e:
+                messages.add_message(
+                    request,
+                    messages.WARNING,
+                    f"Custom file transfer for .go.xml failed: {e}",
+                )
     else:
         file_to_send, folder_string = prep_zip_folder(request, article)
 
