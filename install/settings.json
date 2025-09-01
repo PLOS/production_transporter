@@ -124,7 +124,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "When enabled the article will automatically be transfered via the method set in \"Production Transfer Type\".",
+      "description": "When enabled the article (.zip) will automatically be transfered via the method set in \"Production Transfer Type\".",
       "is_translatable": false,
       "name": "transport_custom_files",
       "pretty_name": "Transport Custom Files",
@@ -154,10 +154,100 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path to a function that returns the file path to transfer, given an article ID. Example: 'plugins.production_transporter.utils.createFileToTransfer'. The function must accept a single argument (article_id: str) and return a string file path.",
+      "description": "Python import path which returns the export .zip filepath given an article ID.",
       "is_translatable": false,
-      "name": "file_transfer_function",
-      "pretty_name": "File Transfer Function",
+      "name": "file_transfer_zip_function",
+      "pretty_name": "File Transfer .zip Function",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called on successful .zip transfer.",
+      "is_translatable": false,
+      "name": "file_transfer_zip_success_callback",
+      "pretty_name": "File Transfer .zip Success Callback",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called on error during .zip transfer.",
+      "is_translatable": false,
+      "name": "file_transfer_zip_error_callback",
+      "pretty_name": "File Transfer .zip Error Callback",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Enable sending of .go.xml file.",
+      "is_translatable": false,
+      "name": "enable_go_file_sending",
+      "pretty_name": "Enable .go.xml File Sending",
+      "type": "boolean"
+    },
+    "value": {
+      "default": false
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path which returns the export .go.xml filepath given an article ID.",
+      "is_translatable": false,
+      "name": "file_transfer_go_function",
+      "pretty_name": "File Transfer .go.xml Function",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called on successful .go.xml transfer.",
+      "is_translatable": false,
+      "name": "file_transfer_go_success_callback",
+      "pretty_name": "File Transfer .go.xml Success Callback",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called on error during .go.xml transfer.",
+      "is_translatable": false,
+      "name": "file_transfer_go_error_callback",
+      "pretty_name": "File Transfer .go.xml Error Callback",
       "type": "char"
     },
     "value": {

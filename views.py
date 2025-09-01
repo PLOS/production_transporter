@@ -57,6 +57,13 @@ def index(request):
         {
             'name': 'transport_custom_files',
             'object': transport_custom_files_value,
+            'enables': [
+                "transfer_method_type",
+                'file_transfer_zip_function',
+                'file_transfer_zip_success_callback',
+                'file_transfer_zip_error_callback',
+            ],
+            'enables_when': True
         },
         {
             'name': 'transfer_method_type',
@@ -64,13 +71,43 @@ def index(request):
             'choices': [
                 ["File Transfer Protocol", "File Transfer Protocol"],
                 ["JSON Body", "JSON Body"]],
-            'disabled': True, # REMOVE BEFORE MERGE IF NOT DISABLED
         },
         {
-            'name': 'file_transfer_function',
-            'object': setting_handler.get_setting('plugin', 'file_transfer_function', request.journal),
+            'name': 'file_transfer_zip_function',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_function', request.journal),
+        },
+        {
+            'name': 'file_transfer_zip_success_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_success_callback', request.journal),
+        },
+        {
+            'name': 'file_transfer_zip_error_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_error_callback', request.journal),
+        },
+        {
+            'name': 'enable_go_file_sending',
+            'object': setting_handler.get_setting('plugin', 'enable_go_file_sending', request.journal),
+            'enables': [
+                'file_transfer_go_function',
+                'file_transfer_go_success_callback',
+                'file_transfer_go_error_callback',
+            ],
+            'enables_when': True
+        },
+        {
+            'name': 'file_transfer_go_function',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_go_function', request.journal),
+        },           
+        {
+            'name': 'file_transfer_go_success_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_go_success_callback', request.journal),
+        },
+        {
+            'name': 'file_transfer_go_error_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_go_error_callback', request.journal),
         }
     ]
+
     setting_group = 'plugin'
     manager_form = forms.GeneratedSettingForm(
         settings=settings
