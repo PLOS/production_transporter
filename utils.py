@@ -108,50 +108,41 @@ def collect_and_send_article(request, article):
         )
         return
 
+    transport_custom_files = setting_handler.get_setting(
+        "plugin",
+        "transport_custom_files",
+        request.journal,
+    ).processed_value
+
     transfer_method = setting_handler.get_setting(
         "plugin",
         "transfer_method_type",
         request.journal,
     ).processed_value
 
-    zip_function_path = setting_handler.get_setting(
-        "plugin", "file_transfer_zip_function", request.journal
-    ).processed_value
+    files_to_send = []
 
-    zip_success_callback_path = setting_handler.get_setting( 
-        "plugin", "file_transfer_zip_success_callback", request.journal 
-    ).processed_value
+    if transport_custom_files:
+        # Handle custom ZIP file transfer if enabled
+        zip_function_path = setting_handler.get_setting(
+            "plugin", "file_transfer_zip_function", request.journal
+        ).processed_value
 
-    zip_failure_callback_path = setting_handler.get_setting( 
-        "plugin", "file_transfer_zip_failure_callback", request.journal
-    ).processed_value
+        zip_success_callback_path = setting_handler.get_setting( 
+            "plugin", "file_transfer_zip_success_callback", request.journal 
+        ).processed_value
 
-    go_enabled = setting_handler.get_setting( 
-        "plugin", "enable_file_transfer_go_xml", request.journal 
-    ).processed_value
+        zip_failure_callback_path = setting_handler.get_setting( 
+            "plugin", "file_transfer_zip_failure_callback", request.journal
+        ).processed_value
 
-    go_function_path = setting_handler.get_setting( 
-        "plugin", "file_transfer_go_function", request.journal 
-    ).processed_value
-
-    go_success_callback_path = setting_handler.get_setting( 
-        "plugin", "file_transfer_go_success_callback", request.journal 
-    ).processed_value
-
-    go_failure_callback_path = setting_handler.get_setting( 
-        "plugin", "file_transfer_go_failure_callback", request.journal
-    ).processed_value
-
-    file_to_send = None
-    folder_string = None
-
-    if transfer_method == "File Transfer Protocol":
         if zip_function_path and zip_success_callback_path and zip_failure_callback_path:
             try:
-                file_to_send = call_transfer_file_function(
+                zip_file_path = call_transfer_file_function(
                     str(article.pk), zip_function_path
                 )
-                if file_to_send:
+                if zip_file_path:
+                    files_to_send.append(zip_file_path)
                     call_transfer_file_function(
                         str(article.pk), zip_success_callback_path
                     )
@@ -165,27 +156,56 @@ def collect_and_send_article(request, article):
                     messages.WARNING,
                     f"Custom file transfer for .zip failed: {e}",
                 )
-        if go_enabled and go_function_path and go_success_callback_path and go_failure_callback_path:
-            try:
-                file_to_send = call_transfer_file_function(
-                    str(article.pk), go_function_path
+                call_transfer_file_function(
+                    str(article.pk), zip_failure_callback_path
                 )
-                if file_to_send:
-                    call_transfer_file_function(
-                        str(article.pk), go_success_callback_path
+
+        # Handle GO XML file transfer if enabled
+        go_enabled = setting_handler.get_setting( 
+            "plugin", "enable_file_transfer_go_xml", request.journal 
+        ).processed_value
+
+        if go_enabled:
+            go_function_path = setting_handler.get_setting( 
+                "plugin", "file_transfer_go_function", request.journal 
+            ).processed_value
+
+            go_success_callback_path = setting_handler.get_setting( 
+                "plugin", "file_transfer_go_success_callback", request.journal 
+            ).processed_value
+
+            go_failure_callback_path = setting_handler.get_setting( 
+                "plugin", "file_transfer_go_failure_callback", request.journal
+            ).processed_value
+
+            if go_function_path and go_success_callback_path and go_failure_callback_path:
+                try:
+                    go_file_path = call_transfer_file_function(
+                        str(article.pk), go_function_path
                     )
-                else:    
+                    if go_file_path:
+                        files_to_send.append(go_file_path)
+                        call_transfer_file_function(
+                            str(article.pk), go_success_callback_path
+                        )
+                    else:    
+                        call_transfer_file_function(
+                            str(article.pk), go_failure_callback_path
+                        )
+                        
+                except Exception as e:
+                    messages.add_message(
+                        request,
+                        messages.WARNING,
+                        f"Custom file transfer for .go.xml failed: {e}",
+                    )
                     call_transfer_file_function(
                         str(article.pk), go_failure_callback_path
                     )
-            except Exception as e:
-                messages.add_message(
-                    request,
-                    messages.WARNING,
-                    f"Custom file transfer for .go.xml failed: {e}",
-                )
     else:
-        file_to_send, folder_string = prep_zip_folder(request, article)
+        # Use default zip folder preparation
+        zipped_deposit_folder, folder_string = prep_zip_folder(request, article)
+        files_to_send.append(zipped_deposit_folder)
 
     # Get FTP details
     ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(
@@ -198,17 +218,26 @@ def collect_and_send_article(request, article):
             'Article not sent to production, FTP details not provided.',
         )
 
-    try:
-        # FTP the file(s) to remote
-        ftp.send_file_via_ftp(
-            ftp_server=ftp_server,
-            ftp_username=ftp_username,
-            ftp_password=ftp_password,
-            remote_path=ftp_remote_directory,
-            file_path=file_to_send,
-        )
-    except Exception as e:
-        logger.error(e)
+    # Send all files via FTP
+    for file_path in files_to_send:
+        if not file_path:
+            continue
+            
+        try:
+            ftp.send_file_via_ftp(
+                ftp_server=ftp_server,
+                ftp_username=ftp_username,
+                ftp_password=ftp_password,
+                remote_path=ftp_remote_directory,
+                file_path=file_path,
+            )
+        except Exception as e:
+            logger.error(f"Failed to send file {file_path}: {e}")
+            messages.add_message(
+                request,
+                messages.ERROR,
+                f"Failed to send file via FTP: {e}",
+            )
 
     # Notify production email address
     notification_context = {
@@ -276,6 +305,3 @@ def on_article_submitted(**kwargs):
 
 def on_article_published(**kwargs):
     on_article_stage(kwargs, submission_models.STAGE_PUBLISHED)
-
-
-
