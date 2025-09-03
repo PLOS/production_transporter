@@ -54,8 +54,8 @@ def index(request):
             'object': setting_handler.get_setting('plugin', 'transport_ftp_remote_path', request.journal),
         },
         {
-            'name': 'transport_custom_files',
-            'object': setting_handler.get_setting('plugin', 'transport_custom_files', request.journal),
+            'name': 'enable_transport_custom_files',
+            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_files', request.journal),
             'enables': [
                 "transfer_method_type",
                 'file_transfer_zip_function',

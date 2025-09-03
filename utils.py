@@ -108,9 +108,9 @@ def collect_and_send_article(request, article):
         )
         return
 
-    transport_custom_files = setting_handler.get_setting(
+    enable_transport_custom_files = setting_handler.get_setting(
         "plugin",
-        "transport_custom_files",
+        "enable_transport_custom_files",
         request.journal,
     ).processed_value
 
@@ -122,7 +122,7 @@ def collect_and_send_article(request, article):
 
     files_to_send = []
 
-    if transport_custom_files:
+    if enable_transport_custom_files:
         # Handle custom ZIP file transfer if enabled
         zip_function_path = setting_handler.get_setting(
             "plugin", "file_transfer_zip_function", request.journal

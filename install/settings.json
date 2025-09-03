@@ -126,8 +126,8 @@
     "setting": {
       "description": "When enabled the article (.zip) will automatically be transfered via the method set in \"Production Transfer Type\".",
       "is_translatable": false,
-      "name": "transport_custom_files",
-      "pretty_name": "Transport Custom Files",
+      "name": "enable_enable_transport_custom_files",
+      "pretty_name": "Enable Transport of Custom Files",
       "type": "boolean"
     },
     "value": {
