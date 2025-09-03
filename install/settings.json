@@ -154,7 +154,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path which returns the export .zip filepath given an article ID.",
+      "description": "Python import path which returns the export .zip filepath given a journal code and article ID.",
       "is_translatable": false,
       "name": "file_transfer_zip_function",
       "pretty_name": "File Transfer .zip Function",
@@ -169,7 +169,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path to a function called on successful .zip transfer.",
+      "description": "Python import path to a function called if .zip transfer succeeds.",
       "is_translatable": false,
       "name": "file_transfer_zip_success_callback",
       "pretty_name": "File Transfer .zip Success Callback",
@@ -184,10 +184,10 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path to a function called on error during .zip transfer.",
+      "description": "Python import path to a function called if .zip transfer fails.",
       "is_translatable": false,
       "name": "file_transfer_zip_failure_callback",
-      "pretty_name": "File Transfer .zip Error Callback",
+      "pretty_name": "File Transfer .zip Failure Callback",
       "type": "char"
     },
     "value": {
@@ -214,7 +214,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path which returns the export .go.xml filepath given an article ID.",
+      "description": "Python import path which returns the export .go.xml filepath given a journal code and article ID.",
       "is_translatable": false,
       "name": "file_transfer_go_function",
       "pretty_name": "File Transfer .go.xml Function",
@@ -229,7 +229,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path to a function called on successful .go.xml transfer.",
+      "description": "Python import path to a function called if .go.xml transfer succeeds.",
       "is_translatable": false,
       "name": "file_transfer_go_success_callback",
       "pretty_name": "File Transfer .go.xml Success Callback",
@@ -244,10 +244,10 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path to a function called on error during .go.xml transfer.",
+      "description": "Python import path to a function called if .go.xml transfer fails.",
       "is_translatable": false,
       "name": "file_transfer_go_failure_callback",
-      "pretty_name": "File Transfer .go.xml Error Callback",
+      "pretty_name": "File Transfer .go.xml Failure Callback",
       "type": "char"
     },
     "value": {
