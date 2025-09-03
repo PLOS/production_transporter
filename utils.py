@@ -82,7 +82,7 @@ def prep_zip_folder(request, article):
 
     return zipped_deposit_folder, folder_string
 
-def call_transfer_file_function(article_id, function_path):
+def call_transfer_file_function(journal_code: str, article_id: str, function_path: str) -> str | None:
     """
     Dynamically imports and calls a function to get the file path to transfer for an article.
     function_path: str, e.g. 'plugins.production_transporter.utils.createFileToTransfer'
@@ -91,7 +91,7 @@ def call_transfer_file_function(article_id, function_path):
     module_name, func_name = function_path.rsplit('.', 1)
     module = importlib.import_module(module_name)
     func = getattr(module, func_name)
-    return func(article_id)
+    return func(journal_code, article_id)
 
 def collect_and_send_article(request, article):
     transport_enabled = setting_handler.get_setting(
@@ -139,16 +139,22 @@ def collect_and_send_article(request, article):
         if zip_function_path and zip_success_callback_path and zip_failure_callback_path:
             try:
                 zip_file_path = call_transfer_file_function(
-                    str(article.pk), zip_function_path
+                    request.journal.code,
+                    str(article.pk),
+                    zip_function_path
                 )
                 if zip_file_path:
                     files_to_send.append(zip_file_path)
                     call_transfer_file_function(
-                        str(article.pk), zip_success_callback_path
+                        request.journal.code,
+                        str(article.pk),
+                        zip_success_callback_path
                     )
                 else:    
                     call_transfer_file_function(
-                        str(article.pk), zip_failure_callback_path
+                        request.journal.code,
+                        str(article.pk),
+                        zip_failure_callback_path
                     )
             except Exception as e:
                 messages.add_message(
@@ -157,7 +163,9 @@ def collect_and_send_article(request, article):
                     f"Custom file transfer for .zip failed: {e}",
                 )
                 call_transfer_file_function(
-                    str(article.pk), zip_failure_callback_path
+                    request.journal.code,
+                    str(article.pk),
+                    zip_failure_callback_path
                 )
 
         # Handle GO XML file transfer if enabled
@@ -181,16 +189,22 @@ def collect_and_send_article(request, article):
             if go_function_path and go_success_callback_path and go_failure_callback_path:
                 try:
                     go_file_path = call_transfer_file_function(
-                        str(article.pk), go_function_path
+                        request.journal.code,
+                        str(article.pk),
+                        go_function_path
                     )
                     if go_file_path:
                         files_to_send.append(go_file_path)
                         call_transfer_file_function(
-                            str(article.pk), go_success_callback_path
+                            request.journal.code,
+                            str(article.pk),
+                            go_success_callback_path
                         )
                     else:    
                         call_transfer_file_function(
-                            str(article.pk), go_failure_callback_path
+                            request.journal.code,
+                            str(article.pk),
+                            go_failure_callback_path
                         )
                         
                 except Exception as e:
@@ -200,7 +214,9 @@ def collect_and_send_article(request, article):
                         f"Custom file transfer for .go.xml failed: {e}",
                     )
                     call_transfer_file_function(
-                        str(article.pk), go_failure_callback_path
+                        request.journal.code,
+                        str(article.pk),
+                        go_failure_callback_path
                     )
     else:
         # Use default zip folder preparation
