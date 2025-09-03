@@ -15,7 +15,6 @@ from submission import models as submission_models
 @has_journal
 @staff_member_required
 def index(request):
-    transport_custom_files_value = setting_handler.get_setting('plugin', 'transport_custom_files', request.journal)
     settings = [
         {
             'name': 'enable_transport',
@@ -56,7 +55,7 @@ def index(request):
         },
         {
             'name': 'transport_custom_files',
-            'object': transport_custom_files_value,
+            'object': setting_handler.get_setting('plugin', 'transport_custom_files', request.journal),
             'enables': [
                 "transfer_method_type",
                 'file_transfer_zip_function',
