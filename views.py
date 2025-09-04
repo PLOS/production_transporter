@@ -56,13 +56,6 @@ def index(request):
         {
             'name': 'enable_transport_custom_files',
             'object': setting_handler.get_setting('plugin', 'enable_transport_custom_files', request.journal),
-            'enables': [
-                "transfer_method_type",
-                'file_transfer_zip_function',
-                'file_transfer_zip_success_callback',
-                'file_transfer_zip_failure_callback',
-            ],
-            'enables_when': True
         },
         {
             'name': 'transfer_method_type',
@@ -74,42 +67,30 @@ def index(request):
         {
             'name': 'file_transfer_zip_function',
             'object': setting_handler.get_setting('plugin', 'file_transfer_zip_function', request.journal),
-            'required': True
         },
         {
             'name': 'file_transfer_zip_success_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_zip_success_callback', request.journal),
-            'required': True
         },
         {
             'name': 'file_transfer_zip_failure_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_zip_failure_callback', request.journal),
-            'required': True
         },
         {
             'name': 'enable_file_transfer_go_xml',
             'object': setting_handler.get_setting('plugin', 'enable_file_transfer_go_xml', request.journal),
-            'enables': [
-                'file_transfer_go_function',
-                'file_transfer_go_success_callback',
-                'file_transfer_go_failure_callback',
-            ],
-            'enables_when': True
         },
         {
             'name': 'file_transfer_go_function',
             'object': setting_handler.get_setting('plugin', 'file_transfer_go_function', request.journal),
-            'required': True
-        },           
+        },
         {
             'name': 'file_transfer_go_success_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_go_success_callback', request.journal),
-            'required': True
         },
         {
             'name': 'file_transfer_go_failure_callback',
             'object': setting_handler.get_setting('plugin', 'file_transfer_go_failure_callback', request.journal),
-            'required': True
         }
     ]
 
