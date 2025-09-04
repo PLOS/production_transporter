@@ -93,7 +93,6 @@ def index(request):
             'object': setting_handler.get_setting('plugin', 'file_transfer_go_failure_callback', request.journal),
         }
     ]
-
     setting_group = 'plugin'
     manager_form = forms.GeneratedSettingForm(
         settings=settings
