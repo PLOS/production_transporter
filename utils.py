@@ -1,4 +1,5 @@
 import importlib
+from typing import Union
 from django.contrib import messages
 
 from janeway_ftp import ftp, helpers as deposit_helpers
@@ -82,7 +83,7 @@ def prep_zip_folder(request, article):
 
     return zipped_deposit_folder, folder_string
 
-def call_transfer_file_function(journal_code: str, article_id: str, function_path: str) -> str | None:
+def call_transfer_file_function(journal_code: str, article_id: str, function_path: str) -> Union[str, None]:
     """
     Dynamically imports and calls a function to get the file path to transfer for an article.
     function_path: str, e.g. 'plugins.production_transporter.utils.createFileToTransfer'
