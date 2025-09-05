@@ -126,7 +126,7 @@
     "setting": {
       "description": "When enabled the article (.zip) will automatically be transfered via the method set in \"Production Transfer Type\".",
       "is_translatable": false,
-      "name": "enable_enable_transport_custom_files",
+      "name": "enable_transport_custom_files",
       "pretty_name": "Enable Transport of Custom Files",
       "type": "boolean"
     },
@@ -154,7 +154,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path which returns the export .zip filepath given a journal code and article ID.",
+      "description": "Python import path which returns the export .zip filepath given a journal code and article ID, in that order.",
       "is_translatable": false,
       "name": "file_transfer_zip_function",
       "pretty_name": "File Transfer .zip Function",
@@ -214,7 +214,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "Python import path which returns the export .go.xml filepath given a journal code and article ID.",
+      "description": "Python import path which returns the export .go.xml filepath given a journal code and article ID, in that order.",
       "is_translatable": false,
       "name": "file_transfer_go_function",
       "pretty_name": "File Transfer .go.xml Function",
