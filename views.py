@@ -6,6 +6,7 @@ from janeway_ftp import ftp
 
 from plugins.production_transporter import plugin_settings, utils as pt_utils
 from core import forms, files
+from plugins.production_transporter.forms import ProductionTransporterSettingsForm
 from submission import models
 from utils import setting_handler
 from security.decorators import has_journal, any_editor_user_required
@@ -94,11 +95,11 @@ def index(request):
         }
     ]
     setting_group = 'plugin'
-    manager_form = forms.GeneratedSettingForm(
+    manager_form = ProductionTransporterSettingsForm(
         settings=settings
     )
     if request.POST:
-        manager_form = forms.GeneratedSettingForm(
+        manager_form = ProductionTransporterSettingsForm(
             request.POST,
             settings=settings,
         )
