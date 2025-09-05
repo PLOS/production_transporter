@@ -94,7 +94,7 @@
       "name": "plugin"
     },
     "setting": {
-      "description": "FTP server password. Will not show once saved.",
+      "description": "Password will not show once saved.",
       "is_translatable": false,
       "name": "transport_ftp_password",
       "pretty_name": "FTP Server Password",
