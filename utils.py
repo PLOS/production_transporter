@@ -120,40 +120,51 @@ def get_custom_transfer_file_path(request, article, transfer_type: str) -> Union
     if not (function_path and success_callback and failure_callback):
         return None
 
+    file_path = None
+    # Try to get the file path from the imported module
     try:
         file_path = call_transfer_file_function(
             request.journal.code,
             str(article.pk),
             function_path
         )
-
-        if file_path:
-            call_transfer_file_function(
-                request.journal.code,
-                str(article.pk),
-                success_callback
-            )
-        else:
-            call_transfer_file_function(
-                request.journal.code,
-                str(article.pk),
-                failure_callback
-            )
-
     except Exception as e:
         messages.add_message(
             request,
             messages.WARNING,
             f"{error_message_prefix}: {e}",
         )
-        call_transfer_file_function(
-            request.journal.code,
-            str(article.pk),
-            failure_callback
-        )
 
-    return file_path
-
+    if file_path:
+        # Success path
+        try:
+            call_transfer_file_function(
+                request.journal.code,
+                str(article.pk),
+                success_callback
+            )
+        except Exception as success_callback_error:
+            messages.add_message(
+                request,
+                messages.WARNING,
+                f"Success callback error: {success_callback_error}",
+            )
+        return file_path
+    else:
+        # Failure path
+        try:
+            call_transfer_file_function(
+                request.journal.code,
+                str(article.pk),
+                failure_callback
+            )
+        except Exception as failure_callback_error:
+            messages.add_message(
+                request,
+                messages.WARNING,
+                f"Failure callback error: {failure_callback_error}",
+            )
+        return None
 
 def send_files_via_ftp(request, files_to_send):
     ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(request.journal)
@@ -238,13 +249,15 @@ def collect_and_send_article(request, article):
     if enable_transport_custom_files:
         # Prepare ZIP file for transfer
         zip_file = get_custom_transfer_file_path(request, article, 'zip')
-        files_to_send.append(zip_file)
+        if zip_file:
+            files_to_send.append(zip_file)
 
         # Prepare GO XML file for transfer if enabled
         go_xml_enabled = get_setting_value('enable_file_transfer_go_xml', request.journal)
         if go_xml_enabled:
             go_xml_file = get_custom_transfer_file_path(request, article, 'go_xml')
-            files_to_send.append(go_xml_file)
+            if go_xml_file:
+                files_to_send.append(go_xml_file)
     else:
         # Use default zip folder preparation
         zipped_deposit_folder, folder_string = prep_zip_folder(request, article)
