@@ -96,8 +96,9 @@ def call_transfer_file_function(journal_code: str, article_id: str, function_pat
 
 def safe_call_transfer(request, article_id: str, function_path: str, error_prefix=None):
     """Safely call `call_transfer_file_function` and return its result or None."""
+    journal_code = request.journal.code
     try:
-        return call_transfer_file_function(request.journal_code, str(article_id), function_path)
+        return call_transfer_file_function(journal_code, str(article_id), function_path)
     except Exception as e:
         prefix = f"{error_prefix}: " if error_prefix else ""
         messages.add_message(
@@ -110,7 +111,6 @@ def safe_call_transfer(request, article_id: str, function_path: str, error_prefi
 def get_setting_value(setting_name: str, journal) -> str:
     """Helper function to get plugin setting processed value"""
     return setting_handler.get_setting('plugin', setting_name, journal).processed_value
-
 
 def get_custom_transfer_file_path(request, article, transfer_type: str) -> Union[str, None]:
     """
@@ -136,7 +136,7 @@ def get_custom_transfer_file_path(request, article, transfer_type: str) -> Union
     # Try to get the file path from the imported module
     file_path = safe_call_transfer(
         request,
-        article.pk,
+        str(article.pk),
         function_path,
         error_prefix=error_message_prefix
     )
@@ -144,7 +144,7 @@ def get_custom_transfer_file_path(request, article, transfer_type: str) -> Union
     if file_path: # If a file path was returned, then call the SUCCESS callback
         safe_call_transfer(
             request,
-            article.pk,
+            str(article.pk),
             success_callback,
             error_prefix="Success callback error"
         )
@@ -153,7 +153,7 @@ def get_custom_transfer_file_path(request, article, transfer_type: str) -> Union
         # If a file path was not returned (i.e., None), then call the FAILURE callback
         safe_call_transfer(
             request,
-            article.pk,
+            str(article.pk),
             failure_callback,
             error_prefix="Failure callback error"
         )
