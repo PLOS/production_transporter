@@ -1,5 +1,5 @@
-import importlib
-from typing import Union
+from pydoc import locate
+from typing import Callable, Optional, Union
 from django.contrib import messages
 
 from janeway_ftp import ftp, helpers as deposit_helpers
@@ -84,14 +84,9 @@ def prep_zip_folder(request, article):
     return zipped_deposit_folder, folder_string
 
 def call_transfer_file_function(journal_code: str, article_id: str, function_path: str) -> Union[str, None]:
-    """
-    Dynamically imports and calls a function to get the file path to transfer for an article.
-    function_path: str, e.g. 'plugins.production_transporter.utils.createFileToTransfer'
-    Returns the file path as a string.
-    """
-    module_name, func_name = function_path.rsplit('.', 1)
-    module = importlib.import_module(module_name)
-    func = getattr(module, func_name)
+    func: Optional[Callable[[str, str], Union[str, None]]] = locate(function_path) # type: ignore
+    if func is None:
+        raise ImportError(f"Cannot locate {function_path}")
     return func(journal_code, article_id)
 
 def safe_call_transfer(request, article_id: str, function_path: str, error_prefix=None):
