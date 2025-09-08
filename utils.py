@@ -94,6 +94,19 @@ def call_transfer_file_function(journal_code: str, article_id: str, function_pat
     func = getattr(module, func_name)
     return func(journal_code, article_id)
 
+def safe_call_transfer(request, article_id: str, function_path: str, error_prefix=None):
+    """Safely call `call_transfer_file_function` and return its result or None."""
+    try:
+        return call_transfer_file_function(request.journal_code, str(article_id), function_path)
+    except Exception as e:
+        prefix = f"{error_prefix}: " if error_prefix else ""
+        messages.add_message(
+            request,
+            messages.WARNING,
+            f"{prefix}{e}",
+        )
+        return None
+
 def get_setting_value(setting_name: str, journal) -> str:
     """Helper function to get plugin setting processed value"""
     return setting_handler.get_setting('plugin', setting_name, journal).processed_value
@@ -120,50 +133,30 @@ def get_custom_transfer_file_path(request, article, transfer_type: str) -> Union
     if not (function_path and success_callback and failure_callback):
         return None
 
-    file_path = None
     # Try to get the file path from the imported module
-    try:
-        file_path = call_transfer_file_function(
-            request.journal.code,
-            str(article.pk),
-            function_path
-        )
-    except Exception as e:
-        messages.add_message(
-            request,
-            messages.WARNING,
-            f"{error_message_prefix}: {e}",
-        )
+    file_path = safe_call_transfer(
+        request,
+        article.pk,
+        function_path,
+        error_prefix=error_message_prefix
+    )
 
-    if file_path:
-        # Success path
-        try:
-            call_transfer_file_function(
-                request.journal.code,
-                str(article.pk),
-                success_callback
-            )
-        except Exception as success_callback_error:
-            messages.add_message(
-                request,
-                messages.WARNING,
-                f"Success callback error: {success_callback_error}",
-            )
+    if file_path: # If a file path was returned, then call the SUCCESS callback
+        safe_call_transfer(
+            request,
+            article.pk,
+            success_callback,
+            error_prefix="Success callback error"
+        )
         return file_path
     else:
-        # Failure path
-        try:
-            call_transfer_file_function(
-                request.journal.code,
-                str(article.pk),
-                failure_callback
-            )
-        except Exception as failure_callback_error:
-            messages.add_message(
-                request,
-                messages.WARNING,
-                f"Failure callback error: {failure_callback_error}",
-            )
+        # If a file path was not returned (i.e., None), then call the FAILURE callback
+        safe_call_transfer(
+            request,
+            article.pk,
+            failure_callback,
+            error_prefix="Failure callback error"
+        )
         return None
 
 def send_files_via_ftp(request, files_to_send):
