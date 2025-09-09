@@ -55,8 +55,8 @@ def index(request):
             'object': setting_handler.get_setting('plugin', 'transport_ftp_remote_path', request.journal),
         },
         {
-            'name': 'enable_transport_custom_files',
-            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_files', request.journal),
+            'name': 'enable_transport_custom_zip',
+            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_zip', request.journal),
         },
         {
             'name': 'transfer_method_type',
@@ -78,8 +78,8 @@ def index(request):
             'object': setting_handler.get_setting('plugin', 'file_transfer_zip_failure_callback', request.journal),
         },
         {
-            'name': 'enable_file_transfer_go_xml',
-            'object': setting_handler.get_setting('plugin', 'enable_file_transfer_go_xml', request.journal),
+            'name': 'enable_transport_custom_go_xml',
+            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_go_xml', request.journal),
         },
         {
             'name': 'file_transfer_go_function',

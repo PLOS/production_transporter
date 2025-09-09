@@ -126,7 +126,7 @@
     "setting": {
       "description": "When enabled the article (.zip) will automatically be transfered via the method set in \"Production Transfer Type\".",
       "is_translatable": false,
-      "name": "enable_transport_custom_files",
+      "name": "enable_transport_custom_zip",
       "pretty_name": "Enable Transport of Custom Files",
       "type": "boolean"
     },
@@ -201,7 +201,7 @@
     "setting": {
       "description": "Enable sending of .go.xml file.",
       "is_translatable": false,
-      "name": "enable_file_transfer_go_xml",
+      "name": "enable_transport_custom_go_xml",
       "pretty_name": "Enable .go.xml File Sending",
       "type": "boolean"
     },
