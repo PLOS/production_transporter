@@ -1,10 +1,11 @@
 from pydoc import locate
-from typing import Callable, Optional, Union
+from typing import Callable, Dict, Optional, Union, Tuple
 from django.contrib import messages
 
 from janeway_ftp import ftp, helpers as deposit_helpers
 
 from utils import setting_handler, notify_helpers, render_template
+from journal.models import Journal
 from core import models
 from utils.logger import get_logger
 from submission import models as submission_models
@@ -57,7 +58,10 @@ def get_ftp_details(journal):
     return ftp_server, ftp_username, ftp_password, ftp_remote_directory
 
 
-def prep_zip_folder(request, article):
+def prep_default_zip(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str]]:
+    if not is_setting_enabled:
+        return None
+
     # Create a temp folder
     temp_deposit_folder, folder_string = deposit_helpers.prepare_temp_folder(
         request=request,
@@ -83,80 +87,144 @@ def prep_zip_folder(request, article):
 
     return zipped_deposit_folder, folder_string
 
-def call_transfer_file_function(journal_code: str, article_id: str, function_path: str) -> Union[str, None]:
+def prep_custom_zip(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str, str]]:
+    if not is_setting_enabled:
+        return None
+
+
+    zip_function_path = get_setting_value('file_transfer_zip_function', request.journal)
+    zip_success_callback_path = get_setting_value('file_transfer_zip_success_callback', request.journal)
+    zip_failure_callback_path = get_setting_value('file_transfer_zip_failure_callback', request.journal)
+
+    #TODO: once settings form has required fields implemented, these checks could be removed
+    if not zip_function_path or not zip_success_callback_path or not zip_failure_callback_path:
+        return None
+    
+    zip_file_path = call_custom_transfer_function(request.journal.code, str(article.pk), zip_function_path)
+    
+    
+    if not zip_file_path:
+        return None
+    
+    return zip_file_path, 'FIND OUT ABOUT THIS: zip_file.name', zip_success_callback_path, zip_failure_callback_path
+    
+def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str, str]]:
+    if not is_setting_enabled:
+        return None
+
+    go_function_path = get_setting_value('file_transfer_go_function', request.journal)
+    go_success_callback_path = get_setting_value('file_transfer_go_success_callback', request.journal)
+    go_failure_callback_path = get_setting_value('file_transfer_go_failure_callback', request.journal)
+
+    #TODO: once settings form has required fields implemented, these checks could be removed
+    if not go_function_path or not go_success_callback_path or not go_failure_callback_path:
+        return None
+    
+    go_file_path = call_custom_transfer_function(request.journal.code, str(article.pk), go_function_path)
+    
+    if not go_file_path:
+        return None
+    
+    return go_file_path, 'FIND OUT ABOUT THIS: go_file.name', go_success_callback_path, go_failure_callback_path
+
+def call_custom_transfer_function(journal_code: str, article_id: str, function_path: str) -> Union[str, None]:
+    """
+    Dynamically imports and calls a function to get the file path to transfer for an article.
+    function_path: str, e.g. 'plugins.production_transporter.utils.createFileToTransfer'
+    Returns the file path as a string or None.
+    """
     func: Optional[Callable[[str, str], Union[str, None]]] = locate(function_path) # type: ignore
     if func is None:
         raise ImportError(f"Cannot locate {function_path}")
     return func(journal_code, article_id)
 
-def safe_call_transfer(request, article_id: str, function_path: str, error_prefix=None):
-    """Safely call `call_transfer_file_function` and return its result or None."""
-    journal_code = request.journal.code
-    try:
-        return call_transfer_file_function(journal_code, str(article_id), function_path)
-    except Exception as e:
-        prefix = f"{error_prefix}: " if error_prefix else ""
-        messages.add_message(
-            request,
-            messages.WARNING,
-            f"{prefix}{e}",
-        )
-        return None
 
-def get_setting_value(setting_name: str, journal) -> str:
+def execute_success_callback(journal_code: str, success_callbacks: Dict) -> None:
+    """
+    Execute a success callback function after successful file transfer.
+    """
+    if not success_callbacks:
+        return
+
+    for file_path, callback_data in success_callbacks.items():
+        callback_path = callback_data['custom_zip_success_callback']
+        required = callback_data['required']
+        if required:
+            try:
+                call_custom_transfer_function(journal_code, callback_path, callback_path)
+                logger.info(f"Success callback executed for {callback_path}")
+                del success_callbacks[file_path]
+            except Exception as e:
+                logger.error(
+                    f"Error executing success callback {callback_path} for {file_path}: {e}"
+                )
+
+
+
+def execute_failure_callback(journal_code: str, failure_callbacks: Dict) -> None:
+    """
+    Execute a failure callback function after failed file transfer.
+    """
+    if not failure_callbacks:
+        return
+
+    for file_path, callback_data in failure_callbacks.items():
+        callback_path = callback_data['custom_zip_failure_callback']
+        required = callback_data['required']
+        if required:
+            try:
+                call_custom_transfer_function(journal_code, file_path, callback_path)
+                logger.info(f"Failure callback executed for {file_path}: {callback_path}")
+                del failure_callbacks[file_path]
+            except Exception as e:
+                logger.error(
+                    f"Error executing failure callback {callback_path} for {file_path}: {e}"
+                )
+
+
+def get_setting_value(setting_name: str, journal) -> Union[str, bool, None]:
     """Helper function to get plugin setting processed value"""
     return setting_handler.get_setting('plugin', setting_name, journal).processed_value
 
-def get_custom_transfer_file_path(request, article, transfer_type: str) -> Union[str, None]:
+def get_files_to_send(request, article: submission_models.Article) -> Tuple:
     """
     Get the (custom transfer) file path for ZIP / GO XML files
     Returns a file path which will be used to target the file in the ftp transfer
     """
-    # Get the function paths based on transfer type
-    if transfer_type == 'zip':
-        function_path = get_setting_value('file_transfer_zip_function', request.journal)
-        success_callback = get_setting_value('file_transfer_zip_success_callback', request.journal)
-        failure_callback = get_setting_value('file_transfer_zip_failure_callback', request.journal)
-        error_message_prefix = "Custom file transfer for .zip failed"
-    else:  # go_xml
-        function_path = get_setting_value('file_transfer_go_function', request.journal)
-        success_callback = get_setting_value('file_transfer_go_success_callback', request.journal)
-        failure_callback = get_setting_value('file_transfer_go_failure_callback', request.journal)
-        error_message_prefix = "Custom file transfer for .go.xml failed"
+    files_to_send = dict()
+    success_callbacks = dict()
+    failure_callbacks = dict()
+    enable_transport = get_setting_value('enable_transport', request.journal)
+    enable_transport_custom_zip = get_setting_value('enable_transport_custom_zip', request.journal)
+    enable_transport_custom_go_xml = get_setting_value('enable_transport_custom_go_xml', request.journal)
 
-    # Check if all required settings are configured
-    if not (function_path and success_callback and failure_callback):
-        return None
 
-    # Try to get the file path from the imported module
-    file_path = safe_call_transfer(
-        request,
-        str(article.pk),
-        function_path,
-        error_prefix=error_message_prefix
+    # Prepare ZIP file for transfer
+    default_zip, folder_string = prep_default_zip(request, article, is_setting_enabled=enable_transport)
+    if default_zip:
+        files_to_send[folder_string] = default_zip
+
+    # Prepare custom ZIP file for transfer
+    custom_zip, zip_name, custom_zip_success_callback, custom_zip_failure_callback = prep_custom_zip(request, article, is_setting_enabled=enable_transport_custom_zip)
+    if custom_zip:
+        files_to_send[zip_name] = custom_zip
+        success_callbacks[zip_name] = {'custom_zip_success_callback': custom_zip_success_callback}
+        failure_callbacks[zip_name] = {'custom_zip_failure_callback': custom_zip_failure_callback}
+
+    # Prepare GO XML file for transfer if enabled
+    custom_go_xml, go_name, custom_go_xml_success_callback, custom_go_xml_failure_callback = prep_custom_go_xml(request, article, is_setting_enabled=enable_transport_custom_go_xml)
+    if custom_go_xml:
+        files_to_send[go_name] = custom_go_xml
+        success_callbacks[go_name] = {'custom_go_xml_success_callback': custom_go_xml_success_callback}
+        failure_callbacks[go_name] = {'custom_go_xml_failure_callback': custom_go_xml_failure_callback}
+
+    return files_to_send, success_callbacks, failure_callbacks
+
+
+def send_files_via_ftp(request, files_to_send, success_callbacks, failure_callbacks):
+    ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(
+        request.journal,
     )
-
-    if file_path: # If a file path was returned, then call the SUCCESS callback
-        safe_call_transfer(
-            request,
-            str(article.pk),
-            success_callback,
-            error_prefix="Success callback error"
-        )
-        return file_path
-    else:
-        # If a file path was not returned (i.e., None), then call the FAILURE callback
-        safe_call_transfer(
-            request,
-            str(article.pk),
-            failure_callback,
-            error_prefix="Failure callback error"
-        )
-        return None
-
-def send_files_via_ftp(request, files_to_send):
-    ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(request.journal)
-
     if not ftp_server or not ftp_username or not ftp_password:
         messages.add_message(
             request,
@@ -164,7 +232,7 @@ def send_files_via_ftp(request, files_to_send):
             'Article not sent to production, FTP details not provided.',
         )
 
-    for file_path in files_to_send:
+    for file_path in files_to_send.keys():
         try:
             ftp.send_file_via_ftp(
                 ftp_server=ftp_server,
@@ -173,13 +241,19 @@ def send_files_via_ftp(request, files_to_send):
                 remote_directory=ftp_remote_directory,
                 file_path=file_path,
             )
+            success_callbacks[file_path] = {**success_callbacks, success_callbacks[file_path]['required']: True}
+
         except Exception as e:
-            logger.error(f"Failed to send file {file_path}: {e}")
+            error_message = str(e)
+            logger.error(f"Failed to send file {file_path}: {error_message}")
+            failure_callbacks[file_path] = {**failure_callbacks, failure_callbacks[file_path]['required']: True}
             messages.add_message(
                 request,
                 messages.ERROR,
-                f"Failed to send file via FTP: {e}",
+                f"Failed to send file via FTP: {error_message}",
             )
+
+    return success_callbacks, failure_callbacks
 
 
 def send_notification_email(request, article):
@@ -218,7 +292,6 @@ def send_notification_email(request, article):
         }
     )
 
-
 def collect_and_send_article(request, article):
     """Main function to collect and send article files"""
     transport_enabled = get_setting_value('enable_transport', request.journal)
@@ -231,31 +304,14 @@ def collect_and_send_article(request, article):
         )
         return
 
-    files_to_send = []
-    enable_transport_custom_files = get_setting_value('enable_transport_custom_files', request.journal)
+    files_to_send, success_callbacks, failure_callbacks = get_files_to_send(request, article)
 
-    if enable_transport_custom_files:
-        # Prepare ZIP file for transfer
-        zip_file = get_custom_transfer_file_path(request, article, 'zip')
-        if zip_file:
-            files_to_send.append(zip_file)
-
-        # Prepare GO XML file for transfer if enabled
-        go_xml_enabled = get_setting_value('enable_file_transfer_go_xml', request.journal)
-        if go_xml_enabled:
-            go_xml_file = get_custom_transfer_file_path(request, article, 'go_xml')
-            if go_xml_file:
-                files_to_send.append(go_xml_file)
-    else:
-        # Use default zip folder preparation
-        zipped_deposit_folder, folder_string = prep_zip_folder(request, article)
-        files_to_send.append(zipped_deposit_folder)
-
-    # Send files via FTP
-    send_files_via_ftp(request, files_to_send)
-
-    # Send notification email
+    success_callbacks, failure_callbacks = send_files_via_ftp(request, files_to_send, success_callbacks, failure_callbacks)
     send_notification_email(request, article)
+    execute_success_callback(request, success_callbacks)
+    execute_failure_callback(request, failure_callbacks)
+    
+    return success_callbacks, failure_callbacks
 
 
 def get_ftp_submission_stage(journal):
