@@ -139,17 +139,16 @@ def call_custom_transfer_function(journal_code: str, article_id: str, function_p
     return func(journal_code, article_id)
 
 
-def execute_success_callback(journal_code: str, success_callbacks: Dict) -> None:
+def execute_success_callback(journal_code: str, success_callbacks: Dict, transfer_results: Dict) -> None:
     """
     Execute a success callback function after successful file transfer.
     """
-    if not success_callbacks:
+    if not success_callbacks or not transfer_results.get('success', None):
         return
 
     for file_path, callback_data in success_callbacks.items():
-        callback_path = callback_data['custom_success_callback']
-        required = callback_data['required']
-        if required:
+        if transfer_results['success'][file_path]:
+            callback_path = callback_data['custom_success_callback']
             try:
                 call_custom_transfer_function(journal_code, callback_path, callback_path)
                 logger.info(f"Success callback executed for {callback_path}")
@@ -160,17 +159,16 @@ def execute_success_callback(journal_code: str, success_callbacks: Dict) -> None
 
 
 
-def execute_failure_callback(journal_code: str, failure_callbacks: Dict) -> None:
+def execute_failure_callback(journal_code: str, failure_callbacks: Dict, transfer_results: Dict) -> None:
     """
     Execute a failure callback function after failed file transfer.
     """
-    if not failure_callbacks:
+    if not failure_callbacks or not transfer_results.get('failure', None):
         return
 
     for file_path, callback_data in failure_callbacks.items():
-        callback_path = callback_data['custom_failure_callback']
-        required = callback_data['required']
-        if required:
+        if transfer_results['failure'][file_path]:
+            callback_path = callback_data['custom_failure_callback']
             try:
                 call_custom_transfer_function(journal_code, file_path, callback_path)
                 logger.info(f"Failure callback executed for {file_path}: {callback_path}")
@@ -222,7 +220,7 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple:
     return files_to_send, success_callbacks, failure_callbacks
 
 
-def send_files_via_ftp(request, files_to_send, success_callbacks, failure_callbacks):
+def send_files_via_ftp(request, files_to_send):
     ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(
         request.journal,
     )
@@ -232,7 +230,10 @@ def send_files_via_ftp(request, files_to_send, success_callbacks, failure_callba
             messages.WARNING,
             'Article not sent to production, FTP details not provided.',
         )
+        return {}
 
+    transfer_results = {}
+    
     for file_path in files_to_send.keys():
         try:
             ftp.send_file_via_ftp(
@@ -242,21 +243,19 @@ def send_files_via_ftp(request, files_to_send, success_callbacks, failure_callba
                 remote_directory=ftp_remote_directory,
                 file_path=file_path,
             )
-            if file_path in success_callbacks:
-                success_callbacks[file_path]['required'] = True
+            transfer_results.setdefault("success", {})[file_path] = True
 
         except Exception as e:
             error_message = str(e)
             logger.error(f"Failed to send file {file_path}: {error_message}")
-            if file_path in failure_callbacks:
-                failure_callbacks[file_path]['required'] = True
+            transfer_results.setdefault("failure", {})[file_path] = True
             messages.add_message(
                 request,
                 messages.ERROR,
                 f"Failed to send file via FTP: {error_message}",
             )
 
-    return success_callbacks, failure_callbacks
+    return transfer_results
 
 
 def send_notification_email(request, article):
@@ -309,10 +308,10 @@ def collect_and_send_article(request, article):
 
     files_to_send, success_callbacks, failure_callbacks = get_files_to_send(request, article)
 
-    success_callbacks, failure_callbacks = send_files_via_ftp(request, files_to_send, success_callbacks, failure_callbacks)
+    transfer_results = send_files_via_ftp(request, files_to_send)
     send_notification_email(request, article)
-    execute_success_callback(request.journal.code, success_callbacks)
-    execute_failure_callback(request.journal.code, failure_callbacks)
+    execute_success_callback(request.journal.code, success_callbacks, transfer_results)
+    execute_failure_callback(request.journal.code, failure_callbacks, transfer_results)
     
     return success_callbacks, failure_callbacks
 
