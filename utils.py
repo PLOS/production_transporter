@@ -63,7 +63,7 @@ def prep_default_zip(request, article, is_setting_enabled=False) -> Union[None, 
         return None
 
     # Create a temp folder
-    temp_deposit_folder, folder_string = deposit_helpers.prepare_temp_folder(
+    temp_deposit_folder, zipped_file_name = deposit_helpers.prepare_temp_folder(
         request=request,
         article=article,
     )
@@ -81,13 +81,13 @@ def prep_default_zip(request, article, is_setting_enabled=False) -> Union[None, 
     )
 
     # Zip Folder
-    zipped_deposit_folder = deposit_helpers.zip_temp_folder(
+    zipped_file_path = deposit_helpers.zip_temp_folder(
         temp_folder=temp_deposit_folder,
     )
 
-    return zipped_deposit_folder, folder_string
+    return zipped_file_path, zipped_file_name
 
-def prep_custom_zip(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str, str]]:
+def prep_custom_zip(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str]]:
     if not is_setting_enabled:
         return None
 
@@ -106,9 +106,9 @@ def prep_custom_zip(request, article, is_setting_enabled=False) -> Union[None, T
     if not zip_file_path:
         return None
     
-    return zip_file_path, 'zip_file_name', zip_success_callback_path, zip_failure_callback_path
+    return zip_file_path, zip_success_callback_path, zip_failure_callback_path
     
-def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str, str]]:
+def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str]]:
     if not is_setting_enabled:
         return None
 
@@ -125,7 +125,7 @@ def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None
     if not go_file_path:
         return None
     
-    return go_file_path, 'go_file_name', go_success_callback_path, go_failure_callback_path
+    return go_file_path, go_success_callback_path, go_failure_callback_path
 
 def call_custom_transfer_function(journal_code: str, article_id: str, function_path: str) -> Union[str, None]:
     """
@@ -198,24 +198,24 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple:
     # Prepare ZIP file for transfer
     default_zip_results = prep_default_zip(request, article, is_setting_enabled=enable_transport)
     if default_zip_results:
-        default_zip, folder_string = default_zip_results
-        files_to_send[folder_string] = default_zip
+        default_zip_path, default_zip_file_name = default_zip_results
+        files_to_send[default_zip_file_name] = default_zip_path
 
     # Prepare custom ZIP file for transfer
     custom_zip_result = prep_custom_zip(request, article, is_setting_enabled=enable_transport_custom_zip)
     if custom_zip_result is not None:
-        custom_zip, zip_name, custom_zip_success_callback, custom_zip_failure_callback = custom_zip_result
-        files_to_send[zip_name] = custom_zip
-        success_callbacks[zip_name] = {'custom_success_callback': custom_zip_success_callback, 'required': False}
-        failure_callbacks[zip_name] = {'custom_failure_callback': custom_zip_failure_callback, 'required': False}
+        custom_zip_path, custom_zip_success_callback, custom_zip_failure_callback = custom_zip_result
+        files_to_send[custom_zip_path] = custom_zip_path
+        success_callbacks[custom_zip_path] = {'custom_success_callback': custom_zip_success_callback, 'required': False}
+        failure_callbacks[custom_zip_path] = {'custom_failure_callback': custom_zip_failure_callback, 'required': False}
 
     # Prepare GO XML file for transfer if enabled
     custom_go_xml_result = prep_custom_go_xml(request, article, is_setting_enabled=enable_transport_custom_go_xml)
     if custom_go_xml_result is not None:
-        custom_go_xml, go_name, custom_go_xml_success_callback, custom_go_xml_failure_callback = custom_go_xml_result
-        files_to_send[go_name] = custom_go_xml
-        success_callbacks[go_name] = {'custom_success_callback': custom_go_xml_success_callback, 'required': False}
-        failure_callbacks[go_name] = {'custom_failure_callback': custom_go_xml_failure_callback, 'required': False}
+        go_xml_path, custom_go_xml_success_callback, custom_go_xml_failure_callback = custom_go_xml_result
+        files_to_send[go_xml_path] = go_xml_path
+        success_callbacks[go_xml_path] = {'custom_success_callback': custom_go_xml_success_callback, 'required': False}
+        failure_callbacks[go_xml_path] = {'custom_failure_callback': custom_go_xml_failure_callback, 'required': False}
 
     return files_to_send, success_callbacks, failure_callbacks
 
@@ -312,8 +312,6 @@ def collect_and_send_article(request, article):
     send_notification_email(request, article)
     execute_success_callback(request.journal.code, success_callbacks, transfer_results)
     execute_failure_callback(request.journal.code, failure_callbacks, transfer_results)
-    
-    return success_callbacks, failure_callbacks
 
 
 def get_ftp_submission_stage(journal):
