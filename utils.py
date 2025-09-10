@@ -143,19 +143,20 @@ def execute_success_callback(journal_code: str, success_callbacks: Dict, transfe
     """
     Execute a success callback function after successful file transfer.
     """
-    if not success_callbacks or not transfer_results.get('success', None):
+    if not success_callbacks:
         return
 
-    for file_path, callback_data in success_callbacks.items():
-        if transfer_results['success'][file_path]:
-            callback_path = callback_data['custom_success_callback']
-            try:
-                call_custom_transfer_function(journal_code, callback_path, callback_path)
-                logger.info(f"Success callback executed for {callback_path}")
-            except Exception as e:
-                logger.error(
-                    f"Error executing success callback {callback_path} for {file_path}: {e}"
-                )
+    if transfer_results.get('success'):
+        for file_path, callback_data in success_callbacks.items():
+            if transfer_results['success'][file_path]:
+                callback_path = callback_data['custom_success_callback']
+                try:
+                    call_custom_transfer_function(journal_code, callback_path, callback_path)
+                    logger.info(f"Success callback executed for {callback_path}")
+                except Exception as e:
+                    logger.error(
+                        f"Error executing success callback {callback_path} for {file_path}: {e}"
+                    )
 
 
 
@@ -163,19 +164,20 @@ def execute_failure_callback(journal_code: str, failure_callbacks: Dict, transfe
     """
     Execute a failure callback function after failed file transfer.
     """
-    if not failure_callbacks or not transfer_results.get('failure', None):
+    if not failure_callbacks:
         return
 
-    for file_path, callback_data in failure_callbacks.items():
-        if transfer_results['failure'][file_path]:
-            callback_path = callback_data['custom_failure_callback']
-            try:
-                call_custom_transfer_function(journal_code, file_path, callback_path)
-                logger.info(f"Failure callback executed for {file_path}: {callback_path}")
-            except Exception as e:
-                logger.error(
-                    f"Error executing failure callback {callback_path} for {file_path}: {e}"
-                )
+    if transfer_results.get('failure'):
+        for file_path, callback_data in failure_callbacks.items():
+            if transfer_results['failure'][file_path]:
+                callback_path = callback_data['custom_failure_callback']
+                try:
+                    call_custom_transfer_function(journal_code, file_path, callback_path)
+                    logger.info(f"Failure callback executed for {file_path}: {callback_path}")
+                except Exception as e:
+                    logger.error(
+                        f"Error executing failure callback {callback_path} for {file_path}: {e}"
+                    )
 
 
 def get_setting_value(setting_name: str, journal) -> Union[str, bool, None]:
