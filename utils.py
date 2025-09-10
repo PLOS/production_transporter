@@ -106,7 +106,7 @@ def prep_custom_zip(request, article, is_setting_enabled=False) -> Union[None, T
     if not zip_file_path:
         return None
     
-    return zip_file_path, 'FIND OUT ABOUT THIS: zip_file.name', zip_success_callback_path, zip_failure_callback_path
+    return zip_file_path, 'zip_file_name', zip_success_callback_path, zip_failure_callback_path
     
 def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str, str]]:
     if not is_setting_enabled:
@@ -125,7 +125,7 @@ def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None
     if not go_file_path:
         return None
     
-    return go_file_path, 'FIND OUT ABOUT THIS: go_file.name', go_success_callback_path, go_failure_callback_path
+    return go_file_path, 'go_file_name', go_success_callback_path, go_failure_callback_path
 
 def call_custom_transfer_function(journal_code: str, article_id: str, function_path: str) -> Union[str, None]:
     """
@@ -147,13 +147,12 @@ def execute_success_callback(journal_code: str, success_callbacks: Dict) -> None
         return
 
     for file_path, callback_data in success_callbacks.items():
-        callback_path = callback_data['custom_zip_success_callback']
+        callback_path = callback_data['custom_success_callback']
         required = callback_data['required']
         if required:
             try:
                 call_custom_transfer_function(journal_code, callback_path, callback_path)
                 logger.info(f"Success callback executed for {callback_path}")
-                del success_callbacks[file_path]
             except Exception as e:
                 logger.error(
                     f"Error executing success callback {callback_path} for {file_path}: {e}"
@@ -169,13 +168,12 @@ def execute_failure_callback(journal_code: str, failure_callbacks: Dict) -> None
         return
 
     for file_path, callback_data in failure_callbacks.items():
-        callback_path = callback_data['custom_zip_failure_callback']
+        callback_path = callback_data['custom_failure_callback']
         required = callback_data['required']
         if required:
             try:
                 call_custom_transfer_function(journal_code, file_path, callback_path)
                 logger.info(f"Failure callback executed for {file_path}: {callback_path}")
-                del failure_callbacks[file_path]
             except Exception as e:
                 logger.error(
                     f"Error executing failure callback {callback_path} for {file_path}: {e}"
@@ -200,23 +198,26 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple:
 
 
     # Prepare ZIP file for transfer
-    default_zip, folder_string = prep_default_zip(request, article, is_setting_enabled=enable_transport)
-    if default_zip:
+    default_zip_results = prep_default_zip(request, article, is_setting_enabled=enable_transport)
+    if default_zip_results:
+        default_zip, folder_string = default_zip_results
         files_to_send[folder_string] = default_zip
 
     # Prepare custom ZIP file for transfer
-    custom_zip, zip_name, custom_zip_success_callback, custom_zip_failure_callback = prep_custom_zip(request, article, is_setting_enabled=enable_transport_custom_zip)
-    if custom_zip:
+    custom_zip_result = prep_custom_zip(request, article, is_setting_enabled=enable_transport_custom_zip)
+    if custom_zip_result is not None:
+        custom_zip, zip_name, custom_zip_success_callback, custom_zip_failure_callback = custom_zip_result
         files_to_send[zip_name] = custom_zip
-        success_callbacks[zip_name] = {'custom_zip_success_callback': custom_zip_success_callback}
-        failure_callbacks[zip_name] = {'custom_zip_failure_callback': custom_zip_failure_callback}
+        success_callbacks[zip_name] = {'custom_success_callback': custom_zip_success_callback, 'required': False}
+        failure_callbacks[zip_name] = {'custom_failure_callback': custom_zip_failure_callback, 'required': False}
 
     # Prepare GO XML file for transfer if enabled
-    custom_go_xml, go_name, custom_go_xml_success_callback, custom_go_xml_failure_callback = prep_custom_go_xml(request, article, is_setting_enabled=enable_transport_custom_go_xml)
-    if custom_go_xml:
+    custom_go_xml_result = prep_custom_go_xml(request, article, is_setting_enabled=enable_transport_custom_go_xml)
+    if custom_go_xml_result is not None:
+        custom_go_xml, go_name, custom_go_xml_success_callback, custom_go_xml_failure_callback = custom_go_xml_result
         files_to_send[go_name] = custom_go_xml
-        success_callbacks[go_name] = {'custom_go_xml_success_callback': custom_go_xml_success_callback}
-        failure_callbacks[go_name] = {'custom_go_xml_failure_callback': custom_go_xml_failure_callback}
+        success_callbacks[go_name] = {'custom_success_callback': custom_go_xml_success_callback, 'required': False}
+        failure_callbacks[go_name] = {'custom_failure_callback': custom_go_xml_failure_callback, 'required': False}
 
     return files_to_send, success_callbacks, failure_callbacks
 
@@ -241,12 +242,14 @@ def send_files_via_ftp(request, files_to_send, success_callbacks, failure_callba
                 remote_directory=ftp_remote_directory,
                 file_path=file_path,
             )
-            success_callbacks[file_path] = {**success_callbacks, success_callbacks[file_path]['required']: True}
+            if file_path in success_callbacks:
+                success_callbacks[file_path]['required'] = True
 
         except Exception as e:
             error_message = str(e)
             logger.error(f"Failed to send file {file_path}: {error_message}")
-            failure_callbacks[file_path] = {**failure_callbacks, failure_callbacks[file_path]['required']: True}
+            if file_path in failure_callbacks:
+                failure_callbacks[file_path]['required'] = True
             messages.add_message(
                 request,
                 messages.ERROR,
@@ -308,8 +311,8 @@ def collect_and_send_article(request, article):
 
     success_callbacks, failure_callbacks = send_files_via_ftp(request, files_to_send, success_callbacks, failure_callbacks)
     send_notification_email(request, article)
-    execute_success_callback(request, success_callbacks)
-    execute_failure_callback(request, failure_callbacks)
+    execute_success_callback(request.journal.code, success_callbacks)
+    execute_failure_callback(request.journal.code, failure_callbacks)
     
     return success_callbacks, failure_callbacks
 
