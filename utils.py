@@ -260,7 +260,7 @@ def send_files_via_ftp(request, files_to_send):
     return transfer_results
 
 
-def send_notification_email(request, article):
+def send_notification_email(request, article, transfer_results):
     """Send notification email to production manager"""
     production_contact_email = get_setting_value('transport_production_manager', request.journal)
 
@@ -269,6 +269,14 @@ def send_notification_email(request, article):
             request,
             messages.WARNING,
             'No production contact set in the Production Transporter plugin.',
+        )
+        return
+
+    if transfer_results.get('success') is None:
+        messages.add_message(
+            request,
+            messages.ERROR,
+            'No articles were sent to production: FTP transfer failed.',
         )
         return
 
@@ -311,7 +319,7 @@ def collect_and_send_article(request, article):
     files_to_send, success_callbacks, failure_callbacks = get_files_to_send(request, article)
 
     transfer_results = send_files_via_ftp(request, files_to_send)
-    send_notification_email(request, article)
+    send_notification_email(request, article, transfer_results)
     execute_success_callback(request.journal.code, success_callbacks, transfer_results)
     execute_failure_callback(request.journal.code, failure_callbacks, transfer_results)
 
