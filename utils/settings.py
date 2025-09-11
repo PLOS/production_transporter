@@ -1,10 +1,11 @@
 from pydoc import locate
-from typing import Callable, Union, Any
+from typing import Callable, Union, Any, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from utils.logger import get_logger
 
 from utils import setting_handler
+from journal.models import Journal
 
 logger = get_logger(__name__)
 
