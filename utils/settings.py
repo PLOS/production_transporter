@@ -38,6 +38,54 @@ def get_setting(setting_name: str, journal: Journal) -> Any | None:
         logger.error("Could not get the following setting, '{0}'".format(setting_name))
         return None
 
+class ZipFileSettings:
+    """
+    A settings class to track the ZIP file settings.
+    """
+
+    def __init__(self, journal: Journal):
+        self.journal = journal
+        self.is_enabled: bool = self.__get_is_enabled()
+        self.function_path: Callable[[str, str], Union[str, None]] = self.__get_function_path()
+        self.success_callback: Callable[[str, str], Union[str, None]] = self.__get_success_callback()
+        self.failure_callback: Callable[[str, str], Union[str, None]] = self.__get_failure_callback()
+    def __get_function_path(self) -> Callable[[str, str], Union[str, None]]:
+        """
+        Gets the path to the function which fetches the file path.
+        :return: The function to get the file path.
+        """
+        function_path: str = get_setting('file_transfer_zip_function', self.journal)
+        if not function_path:
+            return None
+        return get_transfer_file_function(function_path)
+
+    def __get_success_callback(self) -> Callable[[str, str], Union[str, None]]:
+        """
+        Gets the path to the function to call when the file transfer goes successfully.
+        :return: The function to the success callback.
+        """
+        function_path: str = get_setting('file_transfer_zip_success_callback', self.journal)
+        if not function_path:
+            return None
+        return get_transfer_file_function(function_path)
+
+    def __get_failure_callback(self) -> Callable[[str, str], Union[str, None]]:
+        """
+        Gets the path to the function to call when the file transfer fails.
+        :return: The function to the failure callback.
+        """
+        function_path: str = get_setting('file_transfer_zip_failure_callback', self.journal)
+        if not function_path:
+            return None
+        return get_transfer_file_function(function_path)
+
+    def __get_is_enabled(self) -> bool:
+        is_enabled = get_setting("enable_transport_custom_zip", self.journal)
+        if not is_enabled:
+            return False
+        return is_enabled
+
+
 
 class GoFileSettings:
     """
@@ -100,7 +148,8 @@ class ProductionTransporterSettings:
         self.enable_transport_custom_files: bool = self.__get_enable_transport_custom_files()
 
         # More complex settings.
-        self.go_settings: GoFileSettings = GoFileSettings(self.journal)
+        self.custom_zip_settings: ZipFileSettings = ZipFileSettings(self.journal)
+        self.custom_go_settings: GoFileSettings = GoFileSettings(self.journal)
 
     def __get_ftp_server(self) -> str:
         return self.__get_setting("transport_ftp_address")
