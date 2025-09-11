@@ -229,8 +229,16 @@ def send_files_via_ftp(request, files_to_send):
     if not ftp_server or not ftp_username or not ftp_password:
         messages.add_message(
             request,
-            messages.WARNING,
-            'Article not sent to production, FTP details not provided.',
+            messages.ERROR,
+            'Failed to send article to production via FTP: FTP details not provided.',
+        )
+        return {}
+
+    if not files_to_send:
+        messages.add_message(
+            request,
+            messages.ERROR,
+            f'Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.',
         )
         return {}
 
@@ -248,13 +256,11 @@ def send_files_via_ftp(request, files_to_send):
             transfer_results.setdefault("success", {})[file_path] = True
 
         except Exception as e:
-            error_message = str(e)
-            logger.error(f"Failed to send file {file_path}: {error_message}")
             transfer_results.setdefault("failure", {})[file_path] = True
             messages.add_message(
                 request,
                 messages.ERROR,
-                f"Failed to send file via FTP: {error_message}",
+                f"Failed to send file via FTP: {str(e)}",
             )
 
     return transfer_results
