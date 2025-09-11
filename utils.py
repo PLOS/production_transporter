@@ -198,13 +198,13 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple:
 
 
     # Prepare ZIP file for transfer
-    default_zip_results = prep_default_zip(request, article, is_setting_enabled=enable_transport)
+    default_zip_results = prep_default_zip(request, article, is_setting_enabled=(enable_transport and not enable_transport_custom_zip))
     if default_zip_results:
         default_zip_path, default_zip_file_name = default_zip_results
         files_to_send[default_zip_file_name] = default_zip_path
 
     # Prepare custom ZIP file for transfer
-    custom_zip_result = prep_custom_zip(request, article, is_setting_enabled=enable_transport_custom_zip)
+    custom_zip_result = prep_custom_zip(request, article, is_setting_enabled=(enable_transport and enable_transport_custom_zip))
     if custom_zip_result is not None:
         custom_zip_path, custom_zip_success_callback, custom_zip_failure_callback = custom_zip_result
         files_to_send[custom_zip_path] = custom_zip_path
@@ -212,7 +212,7 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple:
         failure_callbacks[custom_zip_path] = {'custom_failure_callback': custom_zip_failure_callback, 'required': False}
 
     # Prepare GO XML file for transfer if enabled
-    custom_go_xml_result = prep_custom_go_xml(request, article, is_setting_enabled=enable_transport_custom_go_xml)
+    custom_go_xml_result = prep_custom_go_xml(request, article, is_setting_enabled=(enable_transport and enable_transport_custom_zip and enable_transport_custom_go_xml))
     if custom_go_xml_result is not None:
         go_xml_path, custom_go_xml_success_callback, custom_go_xml_failure_callback = custom_go_xml_result
         files_to_send[go_xml_path] = go_xml_path
