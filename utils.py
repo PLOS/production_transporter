@@ -4,11 +4,13 @@ from django.contrib import messages
 
 from janeway_ftp import ftp, helpers as deposit_helpers
 
-from utils import setting_handler, notify_helpers, render_template
+from utils.notify_helpers import send_email_with_body_from_user
+from utils.render_template import get_requestless_content
 from journal.models import Journal
 from core import models
 from utils.logger import get_logger
 from submission import models as submission_models
+from plugins.production_transporter.utility.settings import ProductionTransporterSettings
 
 logger = get_logger(__name__)
 
@@ -34,28 +36,8 @@ def copy_article_files(article, temp_deposit_folder):
 
 
 def get_ftp_details(journal):
-    ftp_server = setting_handler.get_setting(
-        'plugin',
-        'transport_ftp_address',
-        journal,
-    ).processed_value
-    ftp_username = setting_handler.get_setting(
-        'plugin',
-        'transport_ftp_username',
-        journal,
-    ).processed_value
-    ftp_password = setting_handler.get_setting(
-        'plugin',
-        'transport_ftp_password',
-        journal,
-    ).processed_value
-    ftp_remote_directory = setting_handler.get_setting(
-        'plugin',
-        'transport_ftp_remote_path',
-        journal,
-    ).processed_value
-
-    return ftp_server, ftp_username, ftp_password, ftp_remote_directory
+    settings = ProductionTransporterSettings(journal)
+    return settings.ftp_server, settings.ftp_username, settings.ftp_password, settings.ftp_remote_directory
 
 
 def prep_default_zip(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str]]:
@@ -87,56 +69,48 @@ def prep_default_zip(request, article, is_setting_enabled=False) -> Union[None, 
 
     return zipped_file_path, zipped_file_name
 
-def prep_custom_zip(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str]]:
+def prep_custom_zip(request, article, is_setting_enabled=False):
     if not is_setting_enabled:
         return None
 
-
-    zip_function_path = get_setting_value('file_transfer_zip_function', request.journal)
-    zip_success_callback_path = get_setting_value('file_transfer_zip_success_callback', request.journal)
-    zip_failure_callback_path = get_setting_value('file_transfer_zip_failure_callback', request.journal)
+    settings = ProductionTransporterSettings(request.journal)
+    zip_function_path = settings.custom_zip_settings.function_path
+    zip_custom_function = settings.custom_zip_settings.custom_function
+    zip_success_callback = settings.custom_zip_settings.success_callback
+    zip_failure_callback = settings.custom_zip_settings.failure_callback
 
     #TODO: once settings form has required fields implemented, these checks could be removed
-    if not zip_function_path or not zip_success_callback_path or not zip_failure_callback_path:
+    if not zip_function_path or not zip_success_callback or not zip_failure_callback:
         return None
     
-    zip_file_path = call_custom_transfer_function(request.journal.code, str(article.pk), zip_function_path)
+    zip_file_path = zip_custom_function(request.journal.code, str(article.pk))
     
     
     if not zip_file_path:
         return None
     
-    return zip_file_path, zip_success_callback_path, zip_failure_callback_path
+    return zip_file_path, zip_success_callback, zip_failure_callback
     
 def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str]]:
     if not is_setting_enabled:
         return None
 
-    go_function_path = get_setting_value('file_transfer_go_function', request.journal)
-    go_success_callback_path = get_setting_value('file_transfer_go_success_callback', request.journal)
-    go_failure_callback_path = get_setting_value('file_transfer_go_failure_callback', request.journal)
+    settings = ProductionTransporterSettings(request.journal)
+    go_function_path = settings.custom_go_settings.function_path
+    go_custom_function = settings.custom_go_settings.custom_function
+    go_success_callback = settings.custom_go_settings.success_callback
+    go_failure_callback = settings.custom_go_settings.failure_callback
 
     #TODO: once settings form has required fields implemented, these checks could be removed
-    if not go_function_path or not go_success_callback_path or not go_failure_callback_path:
+    if not go_function_path or not go_success_callback or not go_failure_callback:
         return None
     
-    go_file_path = call_custom_transfer_function(request.journal.code, str(article.pk), go_function_path)
+    go_file_path = go_custom_function(request.journal.code, str(article.pk))
     
     if not go_file_path:
         return None
     
-    return go_file_path, go_success_callback_path, go_failure_callback_path
-
-def call_custom_transfer_function(journal_code: str, article_id: str, function_path: str) -> Union[str, None]:
-    """
-    Dynamically imports and calls a function to get the file path to transfer for an article.
-    function_path: str, e.g. 'plugins.production_transporter.utils.createFileToTransfer'
-    Returns the file path as a string or None.
-    """
-    func: Optional[Callable[[str, str], Union[str, None]]] = locate(function_path) # type: ignore
-    if func is None:
-        raise ImportError(f"Cannot locate {function_path}")
-    return func(journal_code, article_id)
+    return go_file_path, go_success_callback, go_failure_callback
 
 
 def execute_success_callback(journal_code: str, success_callbacks: Dict, transfer_results: Dict) -> None:
@@ -149,13 +123,14 @@ def execute_success_callback(journal_code: str, success_callbacks: Dict, transfe
     if transfer_results.get('success'):
         for file_path, callback_data in success_callbacks.items():
             if transfer_results['success'][file_path]:
-                callback_path = callback_data['custom_success_callback']
+                success_callback = callback_data['custom_success_callback']
+                article_id = callback_data['article_id']
                 try:
-                    call_custom_transfer_function(journal_code, callback_path, callback_path)
-                    logger.info(f"Success callback executed for {callback_path}")
+                    success_callback(journal_code, article_id)
+                    logger.info(f"Success callback executed for {article_id}")
                 except Exception as e:
                     logger.error(
-                        f"Error executing success callback {callback_path} for {file_path}: {e}"
+                        f"Error executing success callback {article_id} for {file_path}: {e}"
                     )
 
 
@@ -170,31 +145,30 @@ def execute_failure_callback(journal_code: str, failure_callbacks: Dict, transfe
     if transfer_results.get('failure'):
         for file_path, callback_data in failure_callbacks.items():
             if transfer_results['failure'][file_path]:
-                callback_path = callback_data['custom_failure_callback']
+                failure_callback = callback_data['custom_failure_callback']
+                article_id = callback_data['article_id']
                 try:
-                    call_custom_transfer_function(journal_code, file_path, callback_path)
-                    logger.info(f"Failure callback executed for {file_path}: {callback_path}")
+                    failure_callback(journal_code, article_id)
+                    logger.info(f"Failure callback executed for {file_path}: {article_id}")
                 except Exception as e:
                     logger.error(
-                        f"Error executing failure callback {callback_path} for {file_path}: {e}"
+                        f"Error executing failure callback {article_id} for {file_path}: {e}"
                     )
 
 
-def get_setting_value(setting_name: str, journal) -> Union[str, bool, None]:
-    """Helper function to get plugin setting processed value"""
-    return setting_handler.get_setting('plugin', setting_name, journal).processed_value
 
 def get_files_to_send(request, article: submission_models.Article) -> Tuple:
     """
     Get the (custom transfer) file path for ZIP / GO XML files
     Returns a file path which will be used to target the file in the ftp transfer
     """
+    settings = ProductionTransporterSettings(request.journal)
     files_to_send = dict()
     success_callbacks = dict()
     failure_callbacks = dict()
-    enable_transport = get_setting_value('enable_transport', request.journal)
-    enable_transport_custom_zip = get_setting_value('enable_transport_custom_zip', request.journal)
-    enable_transport_custom_go_xml = get_setting_value('enable_transport_custom_go_xml', request.journal)
+    enable_transport = settings.transport_enabled
+    enable_transport_custom_zip = settings.custom_zip_settings.is_enabled
+    enable_transport_custom_go_xml = settings.custom_go_settings.is_enabled
 
 
     # Prepare ZIP file for transfer
@@ -208,16 +182,16 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple:
     if custom_zip_result is not None:
         custom_zip_path, custom_zip_success_callback, custom_zip_failure_callback = custom_zip_result
         files_to_send[custom_zip_path] = custom_zip_path
-        success_callbacks[custom_zip_path] = {'custom_success_callback': custom_zip_success_callback, 'required': False}
-        failure_callbacks[custom_zip_path] = {'custom_failure_callback': custom_zip_failure_callback, 'required': False}
+        success_callbacks[custom_zip_path] = {'custom_success_callback': custom_zip_success_callback, 'required': False, 'article_id': str(article.pk)}
+        failure_callbacks[custom_zip_path] = {'custom_failure_callback': custom_zip_failure_callback, 'required': False, 'article_id': str(article.pk)}
 
     # Prepare GO XML file for transfer if enabled
     custom_go_xml_result = prep_custom_go_xml(request, article, is_setting_enabled=(enable_transport and enable_transport_custom_zip and enable_transport_custom_go_xml))
     if custom_go_xml_result is not None:
         go_xml_path, custom_go_xml_success_callback, custom_go_xml_failure_callback = custom_go_xml_result
         files_to_send[go_xml_path] = go_xml_path
-        success_callbacks[go_xml_path] = {'custom_success_callback': custom_go_xml_success_callback, 'required': False}
-        failure_callbacks[go_xml_path] = {'custom_failure_callback': custom_go_xml_failure_callback, 'required': False}
+        success_callbacks[go_xml_path] = {'custom_success_callback': custom_go_xml_success_callback, 'required': False, 'article_id': str(article.pk)}
+        failure_callbacks[go_xml_path] = {'custom_failure_callback': custom_go_xml_failure_callback, 'required': False, 'article_id': str(article.pk)}
 
     return files_to_send, success_callbacks, failure_callbacks
 
@@ -268,7 +242,8 @@ def send_files_via_ftp(request, files_to_send):
 
 def send_notification_email(request, article, transfer_results):
     """Send notification email to production manager"""
-    production_contact_email = get_setting_value('transport_production_manager', request.journal)
+    settings = ProductionTransporterSettings(request.journal)
+    production_contact_email = settings.production_contact_email
 
     if not production_contact_email:
         messages.add_message(
@@ -290,14 +265,14 @@ def send_notification_email(request, article, transfer_results):
         'journal': article.journal,
         'article': article,
     }
-    notification_content = render_template.get_requestless_content(
+    notification_content = get_requestless_content(
         context=notification_context,
         journal=article.journal,
         template='transport_email_production_manager',
         group_name='plugin',
     )
 
-    notify_helpers.send_email_with_body_from_user(
+    send_email_with_body_from_user(
         request=request,
         subject='New Article Deposited',
         to=production_contact_email,
@@ -312,7 +287,8 @@ def send_notification_email(request, article, transfer_results):
 
 def collect_and_send_article(request, article):
     """Main function to collect and send article files"""
-    transport_enabled = get_setting_value('enable_transport', request.journal)
+    settings = ProductionTransporterSettings(request.journal)
+    transport_enabled = settings.transport_enabled
 
     if not transport_enabled:
         messages.add_message(
@@ -331,11 +307,8 @@ def collect_and_send_article(request, article):
 
 
 def get_ftp_submission_stage(journal):
-    submission_stage = setting_handler.get_setting(
-        'plugin',
-        'transport_production_stage',
-        journal,
-    ).processed_value
+    settings = ProductionTransporterSettings(journal)
+    submission_stage = settings.transport_production_stage
 
     if not submission_stage:
         return submission_models.STAGE_ACCEPTED
