@@ -111,12 +111,10 @@ def prep_custom_go_xml(request, article: submission_models.Article, is_setting_e
     return go_file_path, go_success_callback, go_failure_callback
 
 
-def execute_success_callback(journal_code: str, success_callbacks: Dict, transfer_results: Dict) -> None:
+def execute_callbacks(journal_code: str, success_callbacks: Dict, failure_callbacks: Dict, transfer_results: Dict) -> None:
     """
-    Execute a success callback function after successful file transfer.
+    Execute success and failure callback functions after file transfer.
     """
-    if not success_callbacks:
-        return
 
     if transfer_results.get('success'):
         for file_path, callback_data in success_callbacks.items():
@@ -130,15 +128,6 @@ def execute_success_callback(journal_code: str, success_callbacks: Dict, transfe
                     logger.error(
                         f"Error executing success callback {article_id} for {file_path}: {e}"
                     )
-
-
-
-def execute_failure_callback(journal_code: str, failure_callbacks: Dict, transfer_results: Dict) -> None:
-    """
-    Execute a failure callback function after failed file transfer.
-    """
-    if not failure_callbacks:
-        return
 
     if transfer_results.get('failure'):
         for file_path, callback_data in failure_callbacks.items():
@@ -302,8 +291,7 @@ def collect_and_send_article(request, article: submission_models.Article) -> Non
 
     transfer_results = send_files_via_ftp(request, files_to_send)
     send_notification_email(request, article, transfer_results)
-    execute_success_callback(request.journal.code, success_callbacks, transfer_results)
-    execute_failure_callback(request.journal.code, failure_callbacks, transfer_results)
+    execute_callbacks(request.journal.code, success_callbacks, failure_callbacks, transfer_results)
 
 
 def get_ftp_submission_stage(journal):
