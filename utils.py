@@ -40,7 +40,7 @@ def get_ftp_details(journal):
     return settings.ftp_server, settings.ftp_username, settings.ftp_password, settings.ftp_remote_directory
 
 
-def prep_default_zip(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str]]:
+def prep_default_zip(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Union[None, Tuple[str, str]]:
     if not is_setting_enabled:
         return None
 
@@ -69,7 +69,7 @@ def prep_default_zip(request, article, is_setting_enabled=False) -> Union[None, 
 
     return zipped_file_path, zipped_file_name
 
-def prep_custom_zip(request, article, is_setting_enabled=False):
+def prep_custom_zip(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Union[None, Tuple[str, Callable, Callable]]:
     if not is_setting_enabled:
         return None
 
@@ -91,7 +91,7 @@ def prep_custom_zip(request, article, is_setting_enabled=False):
     
     return zip_file_path, zip_success_callback, zip_failure_callback
     
-def prep_custom_go_xml(request, article, is_setting_enabled=False) -> Union[None, Tuple[str, str, str]]:
+def prep_custom_go_xml(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Union[None, Tuple[str, Callable, Callable]]:
     if not is_setting_enabled:
         return None
 
@@ -157,7 +157,7 @@ def execute_failure_callback(journal_code: str, failure_callbacks: Dict, transfe
 
 
 
-def get_files_to_send(request, article: submission_models.Article) -> Tuple:
+def get_files_to_send(request, article: submission_models.Article) -> Tuple[Dict, Dict, Dict]:
     """
     Get the (custom transfer) file path for ZIP / GO XML files
     Returns a file path which will be used to target the file in the ftp transfer
@@ -196,7 +196,7 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple:
     return files_to_send, success_callbacks, failure_callbacks
 
 
-def send_files_via_ftp(request, files_to_send):
+def send_files_via_ftp(request, files_to_send) -> Dict:
     ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(
         request.journal,
     )
@@ -240,7 +240,7 @@ def send_files_via_ftp(request, files_to_send):
     return transfer_results
 
 
-def send_notification_email(request, article, transfer_results):
+def send_notification_email(request, article: submission_models.Article, transfer_results: Dict) -> None:
     """Send notification email to production manager"""
     settings = ProductionTransporterSettings(request.journal)
     production_contact_email = settings.production_contact_email
@@ -285,7 +285,7 @@ def send_notification_email(request, article, transfer_results):
         }
     )
 
-def collect_and_send_article(request, article):
+def collect_and_send_article(request, article: submission_models.Article) -> None:
     """Main function to collect and send article files"""
     settings = ProductionTransporterSettings(request.journal)
     transport_enabled = settings.transport_enabled
