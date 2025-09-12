@@ -159,9 +159,9 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple[Dict
 
 
     # Prepare ZIP file for transfer
-    default_zip_results = prep_default_zip(request, article, is_setting_enabled=(enable_transport and not enable_transport_custom_zip))
-    if default_zip_results:
-        default_zip_path, default_zip_file_name = default_zip_results
+    default_zip_result = prep_default_zip(request, article, is_setting_enabled=(enable_transport and not enable_transport_custom_zip))
+    if default_zip_result is not None:
+        default_zip_path, default_zip_file_name = default_zip_result
         files_to_send[default_zip_file_name] = default_zip_path
 
     # Prepare custom ZIP file for transfer
