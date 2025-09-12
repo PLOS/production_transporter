@@ -206,7 +206,7 @@
       "type": "boolean"
     },
     "value": {
-      "default": false
+      "default": ""
     }
   },
   {

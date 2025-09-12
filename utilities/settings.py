@@ -33,7 +33,7 @@ def get_setting(setting_name: str, journal: Journal) -> Any | None:
     """
     try:
         return get_setting_handler(setting_group_name=PLUGIN_SETTINGS_GROUP_NAME,
-                                           setting_name=setting_name, journal=journal, ).processed_value
+                                           setting_name=setting_name, journal=journal).processed_value
     except ObjectDoesNotExist:
         logger.error("Could not get the following setting, '{0}'".format(setting_name))
         return None

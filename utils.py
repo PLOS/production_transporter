@@ -201,18 +201,20 @@ def send_files_via_ftp(request, files_to_send) -> Dict:
         request.journal,
     )
     if not ftp_server or not ftp_username or not ftp_password:
+        logger.error('Failed to send article to production via FTP: FTP details not provided.')
         messages.add_message(
             request,
             messages.ERROR,
-            'Failed to send article to production via FTP: FTP details not provided.',
+            'Failed to send article to production.',
         )
         return {}
 
     if not files_to_send:
+        logger.error('Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.')
         messages.add_message(
             request,
             messages.ERROR,
-            f'Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.',
+            'Failed to send article to production.',
         )
         return {}
 
