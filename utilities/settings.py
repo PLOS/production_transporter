@@ -12,15 +12,15 @@ logger = get_logger(__name__)
 PLUGIN_SETTINGS_GROUP_NAME = "plugin"
 
 
-def get_transfer_file_function(function_path: str) -> Callable[[str, str], Union[str, None]]:
+def get_transfer_file_function(function_path: str) -> Optional[Callable[[str, str], Optional[str]]]:
     """
     Gets the callable for the function in a setting.
     :param function_path: The path of the settings file.
     :return: The callable.
     """
-    func: Optional[Callable[[str, str], Union[str, None]]] = locate(function_path)  # type: ignore
+    func: Optional[Callable[[str, str], Optional[str]]] = locate(function_path)  # type: ignore
     if func is None:
-        raise ImportError(f"Cannot locate {function_path}")
+        logger.debug(f"Cannot locate {function_path}")
     return func
 
 
