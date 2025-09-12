@@ -31,7 +31,10 @@ Note: when using SFTP the relevant ECDSA key for the server being deposited. You
 ### Custom File Transfer
 1. Enable "Enable Transport" and "Enable Transport of Custom Files"
 2. Create custom functions for file path generation and callbacks
-3. Configure the function paths in the plugin settings
+3. Configure the function paths in the plugin settings.
+    - A function path is a string that points to a function in a module. 
+    - **Example**: In the UI, File Transfer .zip Function (`file_transfer_zip_function`) could be `plugins.editorial_manager_transfer_service.file_transfer_service.get_export_zip_filepath`.
+        - Note that this path points to a function that can be found in the Editorial Manager Transfer Service plugin.
 
 ## Custom Function Requirements
 Custom functions must follow this signature:
