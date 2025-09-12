@@ -1,5 +1,5 @@
 from pydoc import locate
-from typing import Callable, Dict, Optional, Union, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 from django.contrib import messages
 
 from janeway_ftp import ftp, helpers as deposit_helpers
@@ -40,7 +40,7 @@ def get_ftp_details(journal):
     return settings.ftp_server, settings.ftp_username, settings.ftp_password, settings.ftp_remote_directory
 
 
-def prep_default_zip(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Union[None, Tuple[str, str]]:
+def prep_default_zip(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Optional[Tuple[str, str]]:
     if not is_setting_enabled:
         return None
 
@@ -69,7 +69,7 @@ def prep_default_zip(request, article: submission_models.Article, is_setting_ena
 
     return zipped_file_path, zipped_file_name
 
-def prep_custom_zip(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Union[None, Tuple[str, Callable, Callable]]:
+def prep_custom_zip(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Optional[Tuple[str, Callable, Callable]]:
     if not is_setting_enabled:
         return None
 
@@ -90,7 +90,7 @@ def prep_custom_zip(request, article: submission_models.Article, is_setting_enab
     
     return zip_file_path, zip_success_callback, zip_failure_callback
     
-def prep_custom_go_xml(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Union[None, Tuple[str, Callable, Callable]]:
+def prep_custom_go_xml(request, article: submission_models.Article, is_setting_enabled: bool = False) -> Optional[Tuple[str, Callable, Callable]]:
     if not is_setting_enabled:
         return None
 
