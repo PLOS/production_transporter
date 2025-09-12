@@ -123,7 +123,7 @@ def execute_callbacks(journal_code: str, success_callbacks: Dict, failure_callba
                 article_id = callback_data['article_id']
                 try:
                     success_callback(journal_code, article_id)
-                    logger.info(f"Success callback executed for {article_id}")
+                    logger.debug(f"Success callback executed for {article_id}")
                 except Exception as e:
                     logger.error(
                         f"Error executing success callback {article_id} for {file_path}: {e}"

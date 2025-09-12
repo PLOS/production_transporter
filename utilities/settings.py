@@ -1,5 +1,5 @@
 from pydoc import locate
-from typing import Callable, Union, Any, Optional
+from typing import Callable, Any, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
 from utils.logger import get_logger
@@ -46,11 +46,11 @@ class ZipFileSettings:
     def __init__(self, journal: Journal):
         self.journal = journal
         self.is_enabled: bool = self.__get_is_enabled()
-        self.custom_function: Union[Callable[[str, str], Union[str, None]], None] = self.__get_custom_function()
-        self.success_callback: Union[Callable[[str, str], Union[str, None]], None] = self.__get_success_callback()
-        self.failure_callback: Union[Callable[[str, str], Union[str, None]], None] = self.__get_failure_callback()
+        self.custom_function: Optional[Callable[[str, str], Optional[str]]] = self.__get_custom_function()
+        self.success_callback: Optional[Callable[[str, str], Optional[str]]] = self.__get_success_callback()
+        self.failure_callback: Optional[Callable[[str, str], Optional[str]]] = self.__get_failure_callback()
 
-    def __get_custom_function(self) -> Union[Callable[[str, str], Union[str, None]], None]:
+    def __get_custom_function(self) -> Optional[Callable[[str, str], Optional[str]]]:
         """
         Gets the path to the function which fetches the file path.
         :return: The function to get the file path.
@@ -60,7 +60,7 @@ class ZipFileSettings:
             return None
         return get_transfer_file_function(function_path)
 
-    def __get_success_callback(self) -> Union[Callable[[str, str], Union[str, None]], None]:
+    def __get_success_callback(self) -> Optional[Callable[[str, str], Optional[str]]]:
         """
         Gets the path to the function to call when the file transfer goes successfully.
         :return: The function to the success callback.
@@ -70,7 +70,7 @@ class ZipFileSettings:
             return None
         return get_transfer_file_function(function_path)
 
-    def __get_failure_callback(self) -> Union[Callable[[str, str], Union[str, None]], None]:
+    def __get_failure_callback(self) -> Optional[Callable[[str, str], Optional[str]]]:
         """
         Gets the path to the function to call when the file transfer fails.
         :return: The function to the failure callback.
@@ -96,11 +96,11 @@ class GoFileSettings:
     def __init__(self, journal: Journal):
         self.journal = journal
         self.is_enabled: bool = self.__get_is_enabled()
-        self.custom_function: Union[Callable[[str, str], Union[str, None]], None] = self.__get_custom_function()
-        self.success_callback: Union[Callable[[str, str], Union[str, None]], None] = self.__get_success_callback()
-        self.failure_callback: Union[Callable[[str, str], Union[str, None]], None] = self.__get_failure_callback()
+        self.custom_function: Optional[Callable[[str, str], Optional[str]]] = self.__get_custom_function()
+        self.success_callback: Optional[Callable[[str, str], Optional[str]]] = self.__get_success_callback()
+        self.failure_callback: Optional[Callable[[str, str], Optional[str]]] = self.__get_failure_callback()
 
-    def __get_custom_function(self) -> Union[Callable[[str, str], Union[str, None]], None]:
+    def __get_custom_function(self) -> Optional[Callable[[str, str], Optional[str]]]:
         """
         Gets the path to the function which fetches the file path.
         :return: The function to get the file path.
@@ -110,7 +110,7 @@ class GoFileSettings:
             return None
         return get_transfer_file_function(function_path)
 
-    def __get_success_callback(self) -> Union[Callable[[str, str], Union[str, None]], None]:
+    def __get_success_callback(self) -> Optional[Callable[[str, str], Optional[str]]]:
         """
         Gets the path to the function to call when the file transfer goes successfully.
         :return: The function to the success callback.
@@ -120,7 +120,7 @@ class GoFileSettings:
             return None
         return get_transfer_file_function(function_path)
 
-    def __get_failure_callback(self) -> Union[Callable[[str, str], Union[str, None]], None]:
+    def __get_failure_callback(self) -> Optional[Callable[[str, str], Optional[str]]]:
         """
         Gets the path to the function to call when the file transfer fails.
         :return: The function to the failure callback.
