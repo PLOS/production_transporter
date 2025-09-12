@@ -74,13 +74,12 @@ def prep_custom_zip(request, article: submission_models.Article, is_setting_enab
         return None
 
     settings = ProductionTransporterSettings(request.journal)
-    zip_function_path = settings.custom_zip_settings.function_path
     zip_custom_function = settings.custom_zip_settings.custom_function
     zip_success_callback = settings.custom_zip_settings.success_callback
     zip_failure_callback = settings.custom_zip_settings.failure_callback
 
     #TODO: once settings form has required fields implemented, these checks could be removed
-    if not zip_function_path or not zip_success_callback or not zip_failure_callback:
+    if not zip_custom_function or not zip_success_callback or not zip_failure_callback:
         return None
     
     zip_file_path = zip_custom_function(request.journal.code, str(article.pk))
@@ -96,13 +95,12 @@ def prep_custom_go_xml(request, article: submission_models.Article, is_setting_e
         return None
 
     settings = ProductionTransporterSettings(request.journal)
-    go_function_path = settings.custom_go_settings.function_path
     go_custom_function = settings.custom_go_settings.custom_function
     go_success_callback = settings.custom_go_settings.success_callback
     go_failure_callback = settings.custom_go_settings.failure_callback
 
     #TODO: once settings form has required fields implemented, these checks could be removed
-    if not go_function_path or not go_success_callback or not go_failure_callback:
+    if not go_custom_function or not go_success_callback or not go_failure_callback:
         return None
     
     go_file_path = go_custom_function(request.journal.code, str(article.pk))
