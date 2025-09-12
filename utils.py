@@ -10,7 +10,7 @@ from journal.models import Journal
 from core import models
 from utils.logger import get_logger
 from submission import models as submission_models
-from plugins.production_transporter.utility.settings import ProductionTransporterSettings
+from plugins.production_transporter.utilities.settings import ProductionTransporterSettings
 
 logger = get_logger(__name__)
 
