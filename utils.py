@@ -167,16 +167,16 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple[Dict
     if custom_zip_result is not None:
         custom_zip_path, success_callback, failure_callback = custom_zip_result
         files_to_send[custom_zip_path] = custom_zip_path
-        success_callbacks[custom_zip_path] = {'success_callback': success_callback, 'required': False, 'article_id': str(article.pk)}
-        failure_callbacks[custom_zip_path] = {'failure_callback': failure_callback, 'required': False, 'article_id': str(article.pk)}
+        success_callbacks[custom_zip_path] = {'success_callback': success_callback, 'article_id': str(article.pk)}
+        failure_callbacks[custom_zip_path] = {'failure_callback': failure_callback, 'article_id': str(article.pk)}
 
     # Prepare GO XML file for transfer if enabled
     custom_go_xml_result = prep_custom_go_xml(request, article, is_setting_enabled=(enable_transport and enable_transport_custom_zip and enable_transport_custom_go_xml))
     if custom_go_xml_result is not None:
         go_xml_path, success_callback, failure_callback = custom_go_xml_result
         files_to_send[go_xml_path] = go_xml_path
-        success_callbacks[go_xml_path] = {'success_callback': success_callback, 'required': False, 'article_id': str(article.pk)}
-        failure_callbacks[go_xml_path] = {'failure_callback': failure_callback, 'required': False, 'article_id': str(article.pk)}
+        success_callbacks[go_xml_path] = {'success_callback': success_callback, 'article_id': str(article.pk)}
+        failure_callbacks[go_xml_path] = {'failure_callback': failure_callback, 'article_id': str(article.pk)}
 
     return files_to_send, success_callbacks, failure_callbacks
 
