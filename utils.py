@@ -111,37 +111,35 @@ def prep_custom_go_xml(request, article: submission_models.Article, is_setting_e
     return go_file_path, go_success_callback, go_failure_callback
 
 
-def execute_callbacks(journal_code: str, success_callbacks: Dict, failure_callbacks: Dict, transfer_results: Dict) -> None:
+def execute_callbacks(journal_code: str, success_callbacks: Dict, failure_callbacks: Dict, error_message: Optional[str], exception: Optional[Exception]) -> None:
     """
     Execute success and failure callback functions after file transfer.
     """
 
-    if transfer_results.get('success'):
-        for file_path, callback_data in success_callbacks.items():
-            if transfer_results['success'][file_path]:
-                success_callback = callback_data['custom_success_callback']
-                article_id = callback_data['article_id']
-                try:
-                    success_callback(journal_code, article_id)
-                    logger.debug(f"Success callback executed for {article_id}")
-                except Exception as e:
-                    logger.error(
-                        f"Error executing success callback {article_id} for {file_path}: {e}"
-                    )
-
-    if transfer_results.get('failure'):
+    if error_message:
         for file_path, callback_data in failure_callbacks.items():
-            if transfer_results['failure'][file_path]:
-                failure_callback = callback_data['custom_failure_callback']
-                article_id = callback_data['article_id']
-                try:
-                    failure_callback(journal_code, article_id)
-                    logger.info(f"Failure callback executed for {file_path}: {article_id}")
-                except Exception as e:
-                    logger.error(
-                        f"Error executing failure callback {article_id} for {file_path}: {e}"
-                    )
+            failure_callback = callback_data['failure_callback']
+            article_id = callback_data['article_id']
+            try:
+                failure_callback(journal_code, article_id, error_message, exception)
+                logger.info(f"Failure callback executed for {file_path}: {article_id}")
+            except Exception as e:
+                logger.error(
+                    f"Error executing failure callback {article_id} for {file_path}: {e}"
+                )
+        return
 
+    
+    for file_path, callback_data in success_callbacks.items():
+        success_callback = callback_data['success_callback']
+        article_id = callback_data['article_id']
+        try:
+            success_callback(journal_code, article_id)
+            logger.debug(f"Success callback executed for {article_id}")
+        except Exception as e:
+            logger.error(
+                f"Error executing success callback {article_id} for {file_path}: {e}"
+            )
 
 
 def get_files_to_send(request, article: submission_models.Article) -> Tuple[Dict, Dict, Dict]:
@@ -167,43 +165,45 @@ def get_files_to_send(request, article: submission_models.Article) -> Tuple[Dict
     # Prepare custom ZIP file for transfer
     custom_zip_result = prep_custom_zip(request, article, is_setting_enabled=(enable_transport and enable_transport_custom_zip))
     if custom_zip_result is not None:
-        custom_zip_path, custom_zip_success_callback, custom_zip_failure_callback = custom_zip_result
+        custom_zip_path, success_callback, failure_callback = custom_zip_result
         files_to_send[custom_zip_path] = custom_zip_path
-        success_callbacks[custom_zip_path] = {'custom_success_callback': custom_zip_success_callback, 'required': False, 'article_id': str(article.pk)}
-        failure_callbacks[custom_zip_path] = {'custom_failure_callback': custom_zip_failure_callback, 'required': False, 'article_id': str(article.pk)}
+        success_callbacks[custom_zip_path] = {'success_callback': success_callback, 'required': False, 'article_id': str(article.pk)}
+        failure_callbacks[custom_zip_path] = {'failure_callback': failure_callback, 'required': False, 'article_id': str(article.pk)}
 
     # Prepare GO XML file for transfer if enabled
     custom_go_xml_result = prep_custom_go_xml(request, article, is_setting_enabled=(enable_transport and enable_transport_custom_zip and enable_transport_custom_go_xml))
     if custom_go_xml_result is not None:
-        go_xml_path, custom_go_xml_success_callback, custom_go_xml_failure_callback = custom_go_xml_result
+        go_xml_path, success_callback, failure_callback = custom_go_xml_result
         files_to_send[go_xml_path] = go_xml_path
-        success_callbacks[go_xml_path] = {'custom_success_callback': custom_go_xml_success_callback, 'required': False, 'article_id': str(article.pk)}
-        failure_callbacks[go_xml_path] = {'custom_failure_callback': custom_go_xml_failure_callback, 'required': False, 'article_id': str(article.pk)}
+        success_callbacks[go_xml_path] = {'success_callback': success_callback, 'required': False, 'article_id': str(article.pk)}
+        failure_callbacks[go_xml_path] = {'failure_callback': failure_callback, 'required': False, 'article_id': str(article.pk)}
 
     return files_to_send, success_callbacks, failure_callbacks
 
 
-def send_files_via_ftp(request, files_to_send) -> Dict:
+def send_files_via_ftp(request, files_to_send) -> Tuple[bool, Optional[str], Optional[Exception]]:
     ftp_server, ftp_username, ftp_password, ftp_remote_directory = get_ftp_details(
         request.journal,
     )
     if not ftp_server or not ftp_username or not ftp_password:
-        logger.error('Failed to send article to production via FTP: FTP details not provided.')
+        error_message = 'Failed to send article to production via FTP: FTP details not provided.'
+        logger.error(error_message)
         messages.add_message(
             request,
             messages.ERROR,
             'Failed to send article to production.',
         )
-        return {}
+        return False, error_message, None
 
     if not files_to_send:
-        logger.error('Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.')
+        error_message = 'Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.'
+        logger.error(error_message)
         messages.add_message(
             request,
             messages.ERROR,
             'Failed to send article to production.',
         )
-        return {}
+        return False, error_message, None
 
     transfer_results = {}
     
@@ -216,20 +216,21 @@ def send_files_via_ftp(request, files_to_send) -> Dict:
                 remote_directory=ftp_remote_directory,
                 file_path=file_path,
             )
-            transfer_results.setdefault("success", {})[file_path] = True
 
-        except Exception as e:
-            transfer_results.setdefault("failure", {})[file_path] = True
+        except Exception as exception:
+            error_message = f"Failed to send file via FTP: {str(exception)}"
+            logger.error(error_message)
             messages.add_message(
                 request,
                 messages.ERROR,
-                f"Failed to send file via FTP: {str(e)}",
+                f"Failed to send file via FTP: {str(exception)}",
             )
+            return False, error_message, exception
 
-    return transfer_results
+    return True, None, None
 
 
-def send_notification_email(request, article: submission_models.Article, transfer_results: Dict) -> None:
+def send_notification_email(request, article: submission_models.Article, is_send_success: bool) -> None:
     """Send notification email to production manager"""
     settings = ProductionTransporterSettings(request.journal)
     production_contact_email = settings.production_contact_email
@@ -242,7 +243,7 @@ def send_notification_email(request, article: submission_models.Article, transfe
         )
         return
 
-    if transfer_results.get('success') is None:
+    if not is_send_success:
         messages.add_message(
             request,
             messages.ERROR,
@@ -289,9 +290,9 @@ def collect_and_send_article(request, article: submission_models.Article) -> Non
 
     files_to_send, success_callbacks, failure_callbacks = get_files_to_send(request, article)
 
-    transfer_results = send_files_via_ftp(request, files_to_send)
-    send_notification_email(request, article, transfer_results)
-    execute_callbacks(request.journal.code, success_callbacks, failure_callbacks, transfer_results)
+    is_send_success, error_message, exception = send_files_via_ftp(request, files_to_send)
+    send_notification_email(request, article, is_send_success)
+    execute_callbacks(request.journal.code, success_callbacks, failure_callbacks, error_message, exception)
 
 
 def get_ftp_submission_stage(journal):
