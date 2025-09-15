@@ -6,6 +6,7 @@ from janeway_ftp import ftp
 
 from plugins.production_transporter import plugin_settings, utils as pt_utils
 from core import forms, files
+from plugins.production_transporter.forms import ProductionTransporterSettingsForm
 from submission import models
 from utils import setting_handler
 from security.decorators import has_journal, any_editor_user_required
@@ -52,14 +53,53 @@ def index(request):
         {
             'name': 'transport_ftp_remote_path',
             'object': setting_handler.get_setting('plugin', 'transport_ftp_remote_path', request.journal),
+        },
+        {
+            'name': 'enable_transport_custom_zip',
+            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_zip', request.journal),
+        },
+        {
+            'name': 'transfer_method_type',
+            'object': setting_handler.get_setting('plugin', 'transfer_method_type', request.journal),
+            'choices': [
+                ["File Transfer Protocol", "File Transfer Protocol"],
+                ["JSON Body", "JSON Body"]],
+        },
+        {
+            'name': 'file_transfer_zip_function',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_function', request.journal),
+        },
+        {
+            'name': 'file_transfer_zip_success_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_success_callback', request.journal),
+        },
+        {
+            'name': 'file_transfer_zip_failure_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_zip_failure_callback', request.journal),
+        },
+        {
+            'name': 'enable_transport_custom_go_xml',
+            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_go_xml', request.journal),
+        },
+        {
+            'name': 'file_transfer_go_function',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_go_function', request.journal),
+        },
+        {
+            'name': 'file_transfer_go_success_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_go_success_callback', request.journal),
+        },
+        {
+            'name': 'file_transfer_go_failure_callback',
+            'object': setting_handler.get_setting('plugin', 'file_transfer_go_failure_callback', request.journal),
         }
     ]
     setting_group = 'plugin'
-    manager_form = forms.GeneratedSettingForm(
+    manager_form = ProductionTransporterSettingsForm(
         settings=settings
     )
     if request.POST:
-        manager_form = forms.GeneratedSettingForm(
+        manager_form = ProductionTransporterSettingsForm(
             request.POST,
             settings=settings,
         )
