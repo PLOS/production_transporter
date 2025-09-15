@@ -204,8 +204,6 @@ def send_files_via_ftp(request, files_to_send) -> Tuple[bool, Optional[str], Opt
             'Failed to send article to production.',
         )
         return False, error_message, None
-
-    transfer_results = {}
     
     for file_path in files_to_send.keys():
         try:
