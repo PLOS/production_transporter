@@ -136,6 +136,7 @@ class FileTransporter:
                 self.send_via_ftp(file_path)
 
         except Exception as exception:
+            logger.exception(exception)
             error_message = f"Failed to send file via {ftp_type} for the file '{file_path}': {str(exception)}"
             logger.error(error_message)
             messages.add_message(
