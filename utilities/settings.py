@@ -2,10 +2,10 @@ from pydoc import locate
 from typing import Callable, Any, Optional
 
 from django.core.exceptions import ObjectDoesNotExist
-from utils.logger import get_logger
 
-from utils.setting_handler import get_setting as get_setting_handler
 from journal.models import Journal
+from utils.logger import get_logger
+from utils.setting_handler import get_setting as get_setting_handler
 
 logger = get_logger(__name__)
 
@@ -31,12 +31,14 @@ def get_setting(setting_name: str, journal: Journal) -> Any | None:
     :param journal: The journal to get the settings value for.
     :return: The value for the given setting or a blank string, if the process failed.
     """
+    logger.debug(f"Getting setting for {setting_name} in journal {journal.code}")
     try:
         return get_setting_handler(setting_group_name=PLUGIN_SETTINGS_GROUP_NAME,
-                                           setting_name=setting_name, journal=journal).processed_value
-    except ObjectDoesNotExist:
-        logger.error("Could not get the following setting, '{0}'".format(setting_name))
+                                   setting_name=setting_name, journal=journal).process_value()
+    except ObjectDoesNotExist as e:
+        logger.error("Could not get the following setting, '{0}': {1}".format(setting_name, e))
         return None
+
 
 class ZipFileSettings:
     """
@@ -85,7 +87,6 @@ class ZipFileSettings:
         if not is_enabled:
             return False
         return is_enabled
-
 
 
 class GoFileSettings:
@@ -144,6 +145,7 @@ class ProductionTransporterSettings:
         self.ftp_username: str = self.__get_ftp_username()
         self.ftp_password: str = self.__get_ftp_password()
         self.ftp_remote_directory: str = self.__get_ftp_remote_directory()
+        self.transfer_method_type: str = self.__get_transfer_method_type()
         self.transport_enabled: bool = self.__get_transport_enabled()
         self.transport_production_stage: str = self.__get_transport_production_stage()
         self.production_contact_email: str = self.__get_production_contact_email()
@@ -165,17 +167,20 @@ class ProductionTransporterSettings:
     def __get_ftp_remote_directory(self) -> str:
         return self.__get_setting("transport_ftp_remote_path")
 
+    def __get_transfer_method_type(self):
+        return self.__get_setting("transfer_method_type")
+
     def __get_production_contact_email(self) -> str:
         return self.__get_setting("transport_production_manager")
 
     def __get_transport_enabled(self) -> bool:
         return self.__get_setting("enable_transport")
-    
+
     def __get_transport_production_stage(self) -> str:
         return self.__get_setting("transport_production_stage")
 
     def __get_enable_transport_custom_files(self) -> bool:
         return self.__get_setting("enable_transport_custom_zip")
 
-    def __get_setting(self, settings_name: str) -> Any:
+    def __get_setting(self, settings_name: str) -> bool | int | str | None:
         return get_setting(settings_name, self.journal)

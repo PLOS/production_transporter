@@ -6,8 +6,7 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def get_ftp_submission_stage(journal):
-    settings = ProductionTransporterSettings(journal)
+def get_ftp_submission_stage(settings: ProductionTransporterSettings):
     submission_stage = settings.transport_production_stage
 
     if not submission_stage:
@@ -18,11 +17,12 @@ def get_ftp_submission_stage(journal):
 
 def on_article_stage(kwargs, stage):
     request = kwargs.get('request')
-    submission_stage = get_ftp_submission_stage(request.journal)
+    settings = ProductionTransporterSettings(request.journal)
+    submission_stage = get_ftp_submission_stage(settings)
     if submission_stage != stage:
         return
 
-    file_transporter: FileTransporter = FileTransporter(request, kwargs.get('journal'), kwargs.get('article'))
+    file_transporter: FileTransporter = FileTransporter(request, request.journal, kwargs.get('article'), settings)
     file_transporter.collect_and_send_article()
 
 

@@ -146,7 +146,7 @@
       "type": "select"
     },
     "value": {
-      "default": "File Transfer Protocol"
+      "default": "ftp"
     }
   },
   {

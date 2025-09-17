@@ -1,16 +1,15 @@
-from django.shortcuts import render, redirect, reverse, get_object_or_404
-from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render, redirect, reverse, get_object_or_404
 from janeway_ftp import ftp
 
+from core import files
 from plugins.production_transporter import plugin_settings, utils as pt_utils
-from core import forms, files
 from plugins.production_transporter.forms import ProductionTransporterSettingsForm
-from submission import models
-from utils import setting_handler
 from security.decorators import has_journal, any_editor_user_required
+from submission import models
 from submission import models as submission_models
+from utils import setting_handler
 
 
 @has_journal
@@ -25,9 +24,9 @@ def index(request):
             'name': 'transport_production_stage',
             'object': setting_handler.get_setting('plugin', 'transport_production_stage', request.journal),
             'choices': [
-                [submission_models.STAGE_ACCEPTED,'Accepted'],
-                [submission_models.STAGE_UNASSIGNED,'Submitted'],
-                [submission_models.STAGE_PUBLISHED,'Published']
+                [submission_models.STAGE_ACCEPTED, 'Accepted'],
+                [submission_models.STAGE_UNASSIGNED, 'Submitted'],
+                [submission_models.STAGE_PUBLISHED, 'Published']
             ]
         },
         {
@@ -55,15 +54,15 @@ def index(request):
             'object': setting_handler.get_setting('plugin', 'transport_ftp_remote_path', request.journal),
         },
         {
-            'name': 'enable_transport_custom_zip',
-            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_zip', request.journal),
-        },
-        {
             'name': 'transfer_method_type',
             'object': setting_handler.get_setting('plugin', 'transfer_method_type', request.journal),
             'choices': [
-                ["File Transfer Protocol", "File Transfer Protocol"],
-                ["JSON Body", "JSON Body"]],
+                ["ftp", "File Transfer Protocol (FTP)"],
+                ["sftp", "Secure File Transfer Protocol (SFTP)"]],
+        },
+        {
+            'name': 'enable_transport_custom_zip',
+            'object': setting_handler.get_setting('plugin', 'enable_transport_custom_zip', request.journal),
         },
         {
             'name': 'file_transfer_zip_function',
@@ -96,25 +95,25 @@ def index(request):
     ]
     setting_group = 'plugin'
     manager_form = ProductionTransporterSettingsForm(
-        settings=settings
+            settings=settings
     )
     if request.POST:
         manager_form = ProductionTransporterSettingsForm(
-            request.POST,
-            settings=settings,
+                request.POST,
+                settings=settings,
         )
         if manager_form.is_valid():
             manager_form.save(
-                group=setting_group,
-                journal=request.journal,
+                    group=setting_group,
+                    journal=request.journal,
             )
             messages.add_message(
-                request,
-                messages.SUCCESS,
-                'Form saved.',
+                    request,
+                    messages.SUCCESS,
+                    'Form saved.',
             )
             return redirect(
-                reverse('production_transporter_manager')
+                    reverse('production_transporter_manager')
             )
 
     template = 'production_transporter/index.html'
@@ -122,16 +121,16 @@ def index(request):
         'manager_form': manager_form,
     }
     return render(
-        request,
-        template,
-        context,
+            request,
+            template,
+            context,
     )
 
 
 @any_editor_user_required
 def handshake_url(request):
     articles_in_stage = models.Article.objects.filter(
-        stage=plugin_settings.STAGE,
+            stage=plugin_settings.STAGE,
     )
     template = 'production_transporter/handshake.html'
 
@@ -139,57 +138,57 @@ def handshake_url(request):
         if 'download' in request.POST:
             article_pk = request.POST.get('download')
             article = get_object_or_404(
-                models.Article,
-                pk=article_pk,
-                journal=request.journal,
+                    models.Article,
+                    pk=article_pk,
+                    journal=request.journal,
             )
             zipped_folder_path, folder_string = pt_utils.prep_zip_folder(
-                request,
-                article,
+                    request,
+                    article,
             )
             return files.serve_temp_file(
-                zipped_folder_path,
-                f"{folder_string}.zip",
+                    zipped_folder_path,
+                    f"{folder_string}.zip",
             )
         if 'ftp' in request.POST:
             article_pk = request.POST.get('ftp')
             article = get_object_or_404(
-                models.Article,
-                pk=article_pk,
-                journal=request.journal,
+                    models.Article,
+                    pk=article_pk,
+                    journal=request.journal,
             )
             zipped_folder_path, folder_string = pt_utils.prep_zip_folder(
-                request,
-                article,
+                    request,
+                    article,
             )
             ftp_server, ftp_username, ftp_password, ftp_remote_directory = pt_utils.get_ftp_details(
-                request.journal,
+                    request.journal,
             )
             ftp.send_file_via_ftp(
-                ftp_server=ftp_server,
-                ftp_username=ftp_username,
-                ftp_password=ftp_password,
-                remote_path=ftp_remote_directory,
-                file_path=zipped_folder_path,
+                    ftp_server=ftp_server,
+                    ftp_username=ftp_username,
+                    ftp_password=ftp_password,
+                    remote_path=ftp_remote_directory,
+                    file_path=zipped_folder_path,
             )
 
     context = {
         'articles_in_stage': articles_in_stage,
     }
     return render(
-        request,
-        template,
-        context,
+            request,
+            template,
+            context,
     )
 
 
 @any_editor_user_required
 def jump_url(request, article_id):
     return redirect(
-        reverse(
-            'manage_archive_article',
-            kwargs={
-                'article_id': article_id,
-            }
-        )
+            reverse(
+                    'manage_archive_article',
+                    kwargs={
+                        'article_id': article_id,
+                    }
+            )
     )
