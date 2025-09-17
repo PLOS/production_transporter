@@ -1,0 +1,2 @@
+PLUGIN_SETTINGS_GROUP_NAME = "plugin"
+PLUGIN_SETTINGS_TRANSPORT_STAGE="transport_production_stage"

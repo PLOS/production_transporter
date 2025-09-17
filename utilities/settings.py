@@ -4,12 +4,13 @@ from typing import Callable, Any, Optional
 from django.core.exceptions import ObjectDoesNotExist
 
 from journal.models import Journal
+import plugins.production_transporter.consts.consts as consts
 from utils.logger import get_logger
 from utils.setting_handler import get_setting as get_setting_handler
 
 logger = get_logger(__name__)
 
-PLUGIN_SETTINGS_GROUP_NAME = "plugin"
+
 
 
 def get_transfer_file_function(function_path: str) -> Optional[Callable[[str, str], Optional[str]]]:
@@ -33,10 +34,11 @@ def get_setting(setting_name: str, journal: Journal) -> Any | None:
     """
     logger.debug(f"Getting setting for {setting_name} in journal {journal.code}")
     try:
-        return get_setting_handler(setting_group_name=PLUGIN_SETTINGS_GROUP_NAME,
+        return get_setting_handler(setting_group_name=consts.PLUGIN_SETTINGS_GROUP_NAME,
                                    setting_name=setting_name, journal=journal).process_value()
     except ObjectDoesNotExist as e:
-        logger.error("Could not get the following setting, '{0}': {1}".format(setting_name, e))
+        logger.exception(e)
+        logger.error("Could not get the following setting, '{0}'.".format(setting_name))
         return None
 
 
@@ -177,7 +179,7 @@ class ProductionTransporterSettings:
         return self.__get_setting("enable_transport")
 
     def __get_transport_production_stage(self) -> str:
-        return self.__get_setting("transport_production_stage")
+        return self.__get_setting(consts.PLUGIN_SETTINGS_TRANSPORT_STAGE)
 
     def __get_enable_transport_custom_files(self) -> bool:
         return self.__get_setting("enable_transport_custom_zip")

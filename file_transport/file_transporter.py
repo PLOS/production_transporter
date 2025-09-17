@@ -118,7 +118,8 @@ class FileTransporter:
         try:
             file_path: str = file_preparer.get_filepath()
         except Exception as exception:
-            error_message = f"Failed to get filepath: {str(exception)}"
+            error_message = f"Failed to get filepath for article (ID: {self.article.pk})."
+            logger.exception(exception)
             logger.error(error_message)
             messages.add_message(
                     self.request,
@@ -136,7 +137,8 @@ class FileTransporter:
                 self.send_via_ftp(file_path)
 
         except Exception as exception:
-            error_message = f"Failed to send file via {ftp_type} for the file '{file_path}': {str(exception)}"
+            error_message = f"Failed to send file via {ftp_type} for the file '{file_path}'."
+            logger.exception(exception)
             logger.error(error_message)
             messages.add_message(
                     self.request,
@@ -173,6 +175,7 @@ class FileTransporter:
                 remote_file_path=self.settings.ftp_remote_directory,
                 file_path=file_path,
                 file_name=file_name,
+                confirm_file_sent=False,
         )
 
     def prep_default_zip(self) -> FilePreparer | None:
@@ -221,10 +224,11 @@ class FileTransporter:
             else:
                 file_preparer.failure(error_message, error)
             logger.debug(
-                    f"{'Success' if success else 'Failure'} callback executed for export of article (ID: '{self.article.pk}') for filepath (Filepath: '{file_preparer.get_filepath()}').")
+                    f"{'Success' if success else 'Failure'} callback executed for export of article (ID: '{self.article.pk}').")
         except Exception as e:
+            logger.exception(e)
             logger.error(
-                    f"Error while executing {'success' if success else 'failure'} callback for export of article (ID: '{self.article.pk}') for filepath (Filepath: '{file_preparer.get_filepath()}'): {e}"
+                    f"Error while executing {'success' if success else 'failure'} callback for export of article (ID: '{self.article.pk}')."
             )
             return False
         return True
