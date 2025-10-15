@@ -5,10 +5,9 @@ from typing import Tuple, List
 
 from django.contrib import messages
 from janeway_ftp import ftp, sftp
-
 from journal.models import Journal
 from plugins.production_transporter.file_transport.file_preparer import FilePreparer, DefaultFilePreparer
-from plugins.production_transporter.utilities import email_utils
+from plugins.production_transporter.utilities import email_utils, data_fetch
 from plugins.production_transporter.utilities.settings import ProductionTransporterSettings
 from submission.models import Article
 from utils.logger import get_logger
@@ -17,12 +16,33 @@ logger = get_logger(__name__)
 
 
 class FileTransporter:
-    def __init__(self, request, journal: Journal, article: Article, settings: ProductionTransporterSettings = None):
+    def __init__(self, request, journal: Journal, article: Article = None, article_id: int = None,
+                 settings: ProductionTransporterSettings = None, send_email: bool = True, show_notifications: bool = True):
+        """
+        Creates a file transporter to send items via FTP or SFTP.
+        :param request: The request object.
+        :param journal: The journal where the article is located.
+        :param article: The article to transfer.
+        :param article_id: The ID of the article to transfer.
+        :param settings: The settings for the Production Transporter.
+        :param send_email: True if an email should be sent upon success, False otherwise.
+        :param show_notifications: True if a pop-up message should be shown to indicate success or failure.
+        """
         self.request = request
         self.journal: Journal = journal
+        self.send_email: bool = send_email
+        self.show_notifications: bool = show_notifications
+
+        if article is None:
+            if article_id is None:
+                raise Exception("Must provide article or article id")
+            article = data_fetch.fetch_article(journal, article_id)
+            if not article:
+                raise Exception("Could not find article with id {0}".format(article_id))
+
         self.article: Article = article
         if settings is None:
-            self.settings = ProductionTransporterSettings(journal)
+            self.settings = data_fetch.fetch_settings(journal)
         else:
             self.settings = settings
 
@@ -32,11 +52,12 @@ class FileTransporter:
         """
         if not self.settings.transport_enabled:
             logger.debug("Transport disabled")
-            messages.add_message(
-                    self.request,
-                    messages.INFO,
-                    'Production deposit is in your workflow but FTP transport is disabled for this journal.',
-            )
+            if self.show_notifications:
+                messages.add_message(
+                        self.request,
+                        messages.INFO,
+                        'Production deposit is in your workflow but FTP transport is disabled for this journal.',
+                )
             return False
 
         preparers: List[FilePreparer] = self.get_files_to_send()
@@ -44,16 +65,17 @@ class FileTransporter:
         if not preparers or len(preparers) <= 0:
             error_message = 'Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.'
             logger.error(error_message)
-            messages.add_message(
-                    self.request,
-                    messages.ERROR,
-                    'Failed to send article to production.',
-            )
+            if self.show_notifications:
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        'Failed to send article to production.',
+                )
             return False
 
         success, error_message, exception = self.send_files(preparers)
         self.execute_callbacks(preparers, success, error_message, exception)
-        if success:
+        if success and self.send_email:
             email_utils.send_export_success_notification_email(self.request, self.journal,
                                                                self.article, self.settings.production_contact_email)
         return success
@@ -95,11 +117,12 @@ class FileTransporter:
         if not self.settings.ftp_server or not self.settings.ftp_username or not self.settings.ftp_password:
             error_message = 'Failed to send article to production via FTP: FTP details not provided.'
             logger.error(error_message)
-            messages.add_message(
-                    self.request,
-                    messages.ERROR,
-                    'Failed to send article to production.',
-            )
+            if self.show_notifications:
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        'Failed to send article to production.',
+                )
             return False, error_message, None
 
         for file_preparer in file_preparers:
@@ -121,11 +144,12 @@ class FileTransporter:
             error_message = f"Failed to get filepath for article (ID: {self.article.pk})."
             logger.exception(exception)
             logger.error(error_message)
-            messages.add_message(
-                    self.request,
-                    messages.ERROR,
-                    f"Failed to get the filepath.",
-            )
+            if self.show_notifications:
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        f"Failed to get the filepath.",
+                )
             return False, error_message, exception
 
         ftp_type: str = "FTP"
@@ -140,11 +164,12 @@ class FileTransporter:
             error_message = f"Failed to send file via {ftp_type} for the file '{file_path}'."
             logger.exception(exception)
             logger.error(error_message)
-            messages.add_message(
-                    self.request,
-                    messages.ERROR,
-                    f"Failed to send file via {ftp_type}.",
-            )
+            if self.show_notifications:
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        f"Failed to send file via {ftp_type}.",
+                )
             return False, error_message, exception
 
         return True, None, None

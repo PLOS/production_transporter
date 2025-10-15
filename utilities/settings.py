@@ -1,16 +1,12 @@
 from pydoc import locate
 from typing import Callable, Any, Optional
 
-from django.core.exceptions import ObjectDoesNotExist
-
-from journal.models import Journal
 import plugins.production_transporter.consts.consts as consts
+from journal.models import Journal
+from plugins.production_transporter.utilities import data_fetch
 from utils.logger import get_logger
-from utils.setting_handler import get_setting as get_setting_handler
 
 logger = get_logger(__name__)
-
-
 
 
 def get_transfer_file_function(function_path: str) -> Optional[Callable[[str, str], Optional[str]]]:
@@ -25,21 +21,16 @@ def get_transfer_file_function(function_path: str) -> Optional[Callable[[str, st
     return func
 
 
-def get_setting(setting_name: str, journal: Journal) -> Any | None:
+def get_setting(setting_name: str, journal: Journal, fetch_fresh: bool = False) -> Any | None:
     """
     Gets the setting for the given setting name.
+    :param fetch_fresh: True if this should ignore the cache and fetch fresh.
     :param setting_name: The name of the setting to get the value for.
     :param journal: The journal to get the settings value for.
     :return: The value for the given setting or a blank string, if the process failed.
     """
     logger.debug(f"Getting setting for {setting_name} in journal {journal.code}")
-    try:
-        return get_setting_handler(setting_group_name=consts.PLUGIN_SETTINGS_GROUP_NAME,
-                                   setting_name=setting_name, journal=journal).process_value()
-    except ObjectDoesNotExist as e:
-        logger.exception(e)
-        logger.error("Could not get the following setting, '{0}'.".format(setting_name))
-        return None
+    return data_fetch.fetch_setting(journal, consts.PLUGIN_SETTINGS_GROUP_NAME, setting_name, fetch_fresh=fetch_fresh)
 
 
 class ZipFileSettings:
@@ -47,8 +38,9 @@ class ZipFileSettings:
     A settings class to track the ZIP file settings.
     """
 
-    def __init__(self, journal: Journal):
+    def __init__(self, journal: Journal, get_fresh: bool = False):
         self.journal = journal
+        self.get_fresh = get_fresh
         self.is_enabled: bool = self.__get_is_enabled()
         self.custom_function: Optional[Callable[[str, str], Optional[str]]] = self.__get_custom_function()
         self.success_callback: Optional[Callable[[str, str], Optional[str]]] = self.__get_success_callback()
@@ -59,7 +51,7 @@ class ZipFileSettings:
         Gets the path to the function which fetches the file path.
         :return: The function to get the file path.
         """
-        function_path: str = get_setting('file_transfer_zip_function', self.journal)
+        function_path: str = get_setting('file_transfer_zip_function', self.journal, self.get_fresh)
         if not function_path:
             return None
         return get_transfer_file_function(function_path)
@@ -69,7 +61,7 @@ class ZipFileSettings:
         Gets the path to the function to call when the file transfer goes successfully.
         :return: The function to the success callback.
         """
-        function_path: str = get_setting('file_transfer_zip_success_callback', self.journal)
+        function_path: str = get_setting('file_transfer_zip_success_callback', self.journal, self.get_fresh)
         if not function_path:
             return None
         return get_transfer_file_function(function_path)
@@ -79,13 +71,13 @@ class ZipFileSettings:
         Gets the path to the function to call when the file transfer fails.
         :return: The function to the failure callback.
         """
-        function_path: str = get_setting('file_transfer_zip_failure_callback', self.journal)
+        function_path: str = get_setting('file_transfer_zip_failure_callback', self.journal, self.get_fresh)
         if not function_path:
             return None
         return get_transfer_file_function(function_path)
 
     def __get_is_enabled(self) -> bool:
-        is_enabled = get_setting("enable_transport_custom_zip", self.journal)
+        is_enabled = get_setting("enable_transport_custom_zip", self.journal, self.get_fresh)
         if not is_enabled:
             return False
         return is_enabled
@@ -96,8 +88,9 @@ class GoFileSettings:
     A settings class to track the Go XML file settings.
     """
 
-    def __init__(self, journal: Journal):
+    def __init__(self, journal: Journal, get_fresh: bool = False):
         self.journal = journal
+        self.get_fresh = get_fresh
         self.is_enabled: bool = self.__get_is_enabled()
         self.custom_function: Optional[Callable[[str, str], Optional[str]]] = self.__get_custom_function()
         self.success_callback: Optional[Callable[[str, str], Optional[str]]] = self.__get_success_callback()
@@ -108,7 +101,7 @@ class GoFileSettings:
         Gets the path to the function which fetches the file path.
         :return: The function to get the file path.
         """
-        function_path: str = get_setting('file_transfer_go_function', self.journal)
+        function_path: str = get_setting('file_transfer_go_function', self.journal, self.get_fresh)
         if not function_path:
             return None
         return get_transfer_file_function(function_path)
@@ -118,7 +111,7 @@ class GoFileSettings:
         Gets the path to the function to call when the file transfer goes successfully.
         :return: The function to the success callback.
         """
-        function_path: str = get_setting('file_transfer_go_success_callback', self.journal)
+        function_path: str = get_setting('file_transfer_go_success_callback', self.journal, self.get_fresh)
         if not function_path:
             return None
         return get_transfer_file_function(function_path)
@@ -128,21 +121,22 @@ class GoFileSettings:
         Gets the path to the function to call when the file transfer fails.
         :return: The function to the failure callback.
         """
-        function_path: str = get_setting('file_transfer_go_failure_callback', self.journal)
+        function_path: str = get_setting('file_transfer_go_failure_callback', self.journal, self.get_fresh)
         if not function_path:
             return None
         return get_transfer_file_function(function_path)
 
     def __get_is_enabled(self) -> bool:
-        is_enabled = get_setting("enable_transport_custom_go_xml", self.journal)
+        is_enabled = get_setting("enable_transport_custom_go_xml", self.journal, self.get_fresh)
         if not is_enabled:
             return False
         return is_enabled
 
 
 class ProductionTransporterSettings:
-    def __init__(self, journal: Journal):
+    def __init__(self, journal: Journal, get_fresh: bool = False):
         self.journal: Journal = journal
+        self.get_fresh: bool = get_fresh
         self.ftp_server: str = self.__get_ftp_server()
         self.ftp_username: str = self.__get_ftp_username()
         self.ftp_password: str = self.__get_ftp_password()
@@ -154,8 +148,8 @@ class ProductionTransporterSettings:
         self.enable_transport_custom_files: bool = self.__get_enable_transport_custom_files()
 
         # More complex settings.
-        self.custom_zip_settings: ZipFileSettings = ZipFileSettings(self.journal)
-        self.custom_go_settings: GoFileSettings = GoFileSettings(self.journal)
+        self.custom_zip_settings: ZipFileSettings = ZipFileSettings(self.journal, self.get_fresh)
+        self.custom_go_settings: GoFileSettings = GoFileSettings(self.journal, self.get_fresh)
 
     def __get_ftp_server(self) -> str:
         return self.__get_setting("transport_ftp_address")
@@ -185,4 +179,4 @@ class ProductionTransporterSettings:
         return self.__get_setting("enable_transport_custom_zip")
 
     def __get_setting(self, settings_name: str) -> bool | int | str | None:
-        return get_setting(settings_name, self.journal)
+        return get_setting(settings_name, self.journal, self.get_fresh)

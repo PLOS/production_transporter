@@ -78,6 +78,11 @@ class FilePreparer():
 
         return self.filename
 
+    def get_file_folder(self) -> str | None:
+        if self.get_filepath() is None:
+            return None
+        return self.file_folder
+
     def prepare_temp_folder(self, filepath: str) -> str | None:
         temp_deposit_folder, zipped_file_name = deposit_helpers.prepare_temp_folder(
                 request=self.request,
@@ -123,5 +128,8 @@ class DefaultFilePreparer(FilePreparer):
         zipped_file_path = deposit_helpers.zip_temp_folder(
                 temp_folder=temp_deposit_folder,
         )
+
+        self.file_folder = os.path.dirname(zipped_file_path)
+        self.filename = os.path.basename(zipped_file_path)
 
         return zipped_file_path
