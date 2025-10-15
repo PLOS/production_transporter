@@ -1,11 +1,16 @@
+import os
+from typing import List
+
+from core import files
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, reverse, get_object_or_404
-from janeway_ftp import ftp
-
-from core import files
+from janeway_ftp import helpers as deposit_helpers
 from plugins.production_transporter import plugin_settings, utils as pt_utils
+from plugins.production_transporter.file_transport.file_preparer import FilePreparer
+from plugins.production_transporter.file_transport.file_transporter import FileTransporter
 from plugins.production_transporter.forms import ProductionTransporterSettingsForm
+from plugins.production_transporter.utilities import file_utils
 from security.decorators import has_journal, any_editor_user_required
 from submission import models
 from submission import models as submission_models
@@ -136,19 +141,38 @@ def handshake_url(request):
 
     if request.POST:
         if 'download' in request.POST:
+
             article_pk = request.POST.get('download')
             article = get_object_or_404(
                     models.Article,
                     pk=article_pk,
                     journal=request.journal,
             )
-            zipped_folder_path, folder_string = pt_utils.prep_zip_folder(
-                    request,
-                    article,
-            )
+            file_transporter = FileTransporter(request, request.journal, article)
+            file_preparers: List[FilePreparer] = file_transporter.get_files_to_send()
+            if not file_preparers or len(file_preparers) <= 0:
+                messages.add_message(
+                        request,
+                        messages.ERROR,
+                        'Could not download files.',
+                )
+                return None
+
+            if len(file_preparers) > 1:
+                deposit_folder, zipped_file_name = deposit_helpers.prepare_temp_folder()
+                for file_preparer in file_preparers:
+                    file_utils.copy_files_to_temp_deposit_folder(file_preparer.get_filepath(), deposit_folder)
+                zipped_file_path = deposit_helpers.zip_temp_folder(
+                        temp_folder=deposit_folder,
+                )
+                filename = os.path.basename(zipped_file_path)
+            else:
+                zipped_file_path = file_preparers[0].get_filepath()
+                filename = file_preparers[0].get_filename()
+
             return files.serve_temp_file(
-                    zipped_folder_path,
-                    f"{folder_string}.zip",
+                    zipped_file_path,
+                    f"{filename}.zip",
             )
         if 'ftp' in request.POST:
             article_pk = request.POST.get('ftp')
@@ -157,20 +181,7 @@ def handshake_url(request):
                     pk=article_pk,
                     journal=request.journal,
             )
-            zipped_folder_path, folder_string = pt_utils.prep_zip_folder(
-                    request,
-                    article,
-            )
-            ftp_server, ftp_username, ftp_password, ftp_remote_directory = pt_utils.get_ftp_details(
-                    request.journal,
-            )
-            ftp.send_file_via_ftp(
-                    ftp_server=ftp_server,
-                    ftp_username=ftp_username,
-                    ftp_password=ftp_password,
-                    remote_path=ftp_remote_directory,
-                    file_path=zipped_folder_path,
-            )
+            pt_utils.do_file_transfer(request, request.journal, article=article)
 
     context = {
         'articles_in_stage': articles_in_stage,
