@@ -33,7 +33,7 @@ def fetch_setting(journal: Journal, setting_group_name: str, setting_name: str, 
                                                   setting_name=setting_name, journal=journal, ).processed_value
             cache.set(f"setting_{setting_group_name}_{setting_name}", setting, SETTINGS_CACHE_TIMEOUT)
         except ObjectDoesNotExist as e:
-            logger.log_error("Could not get the following setting, '{0}'".format(setting_name), e)
+            logger.exception("Could not get the following setting, '{0}'".format(setting_name), e)
             return None
 
     return setting
