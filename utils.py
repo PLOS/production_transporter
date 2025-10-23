@@ -5,26 +5,78 @@ from plugins.production_transporter.utilities.settings import ProductionTranspor
 from submission import models as submission_models
 from submission.models import Article
 from utils.logger import get_logger
+from django_tasks import task
 
 logger = get_logger(__name__)
 
 
-def do_file_transfer(request, journal: Journal, article_id: int = None, article: Article = None,
-                     settings: ProductionTransporterSettings = None, send_email: bool = True,
+def serialize_request(request):
+    """Return a simplified, serializable version of a Django WSGIRequest, accessible by dot notation."""
+    try:
+        user = getattr(request, "user", None)
+        user_repr = (
+            {"id": user.id, "username": user.username, "email": user.email}
+            if user and user.is_authenticated
+            else None
+        )
+        journal = getattr(request, "journal", None)
+        journal_repr = (
+            {"code": journal.code}
+            if journal
+            else None
+        )
+
+        data = {
+            "method": request.method,
+            "path": request.path,
+            "full_path": request.get_full_path(),
+            "remote_addr": request.META.get("REMOTE_ADDR"),
+            "host": request.get_host(),
+            "content_type": request.META.get("CONTENT_TYPE"),
+            "query_params": dict(request.GET),
+            "post_data": dict(request.POST) if request.method == "POST" else None,
+            "user": user_repr,
+            "journal": journal_repr,
+            "headers": {
+                k: v
+                for k, v in request.headers.items()
+                if k.lower() in ["user-agent", "referer", "accept", "content-type"]
+            },
+        }
+
+        # return dict_to_namespace(data)
+        return data
+
+    except Exception:
+        return None
+
+def schedule_file_transfer(request, journal_code: str, article_id: int = None, send_email: bool = True,
+                           show_notifications: bool = True, ) -> None:
+    """
+    Schedules a file transfer by calling the django-task, do_file_transfer.
+    Creates a serializable request that can be passed to the task queue.
+    """
+    serializable_request = serialize_request(request)
+    print(f"jtl: {serializable_request}")
+    do_file_transfer.enqueue(serializable_request, journal_code, article_id=article_id, send_email=send_email,
+                             show_notifications=show_notifications)
+
+@task()
+def do_file_transfer(serializable_request, journal_code: str, article_id: int = None, send_email: bool = True,
                      show_notifications: bool = True, ) -> None:
     """
     Does a file transfer.
-    :param request: Request must contain the article, journal, and user making the request.
+    :param serializable_request: Request must contain the article, journal, and user making the request.
     :param journal: The journal where the article is located.
     :param article_id: The ID of the article to transfer.
     :param article: The article to transfer.
-    :param settings: The settings to use.
     :param send_email: True if an email should be sent upon a successful transfer, False otherwise.
     :param show_notifications: True if a pop-up notification should be shown.
     :return:
     """
-    file_transporter: FileTransporter = FileTransporter(request, journal, article=article, article_id=article_id,
-                                                        settings=settings, send_email=send_email,
+    journal = data_fetch.fetch_journal_data(journal_code)
+    file_transporter: FileTransporter = FileTransporter(request=serializable_request, journal=journal,
+                                                        article_id=article_id, send_email=send_email,
                                                         show_notifications=show_notifications)
     file_transporter.collect_and_send_article()
 
@@ -44,8 +96,9 @@ def on_article_stage(stage: str, kwargs):
     submission_stage = get_ftp_submission_stage(settings)
     if submission_stage != stage:
         return
-
-    do_file_transfer(request, request.journal, article=kwargs.get('article'), settings=settings)
+    article = kwargs.get('article')
+    journal_code = request.journal.code
+    schedule_file_transfer(request=request, journal_code=journal_code, article_id=article.id)
 
 
 def on_article_accepted(**kwargs):

@@ -9,11 +9,11 @@ def send_export_success_notification_email(request, journal: Journal, article: A
     """Send notification email to production manager"""
 
     if not production_contact_email:
-        messages.add_message(
-                request,
-                messages.WARNING,
-                'No production contact set in the Production Transporter plugin.',
-        )
+        # messages.add_message(
+        #         request,
+        #         messages.WARNING,
+        #         'No production contact set in the Production Transporter plugin.',
+        # )
         return
 
     notification_context = {

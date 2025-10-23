@@ -1,1 +1,2 @@
 -e git+https://github.com/birkbeckctp/janeway-ftp.git@v0.6.0#egg=janeway-ftp
+django-tasks==0.8.1
