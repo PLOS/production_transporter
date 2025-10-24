@@ -57,7 +57,6 @@ def schedule_file_transfer(request, journal_code: str, article_id: int = None, s
     Creates a serializable request that can be passed to the task queue.
     """
     serializable_request = serialize_request(request)
-    print(f"jtl: {serializable_request}")
     do_file_transfer.enqueue(serializable_request, journal_code, article_id=article_id, send_email=send_email,
                              show_notifications=show_notifications)
 
