@@ -37,8 +37,9 @@ def verify_request_has_required_data(request) -> Tuple[Optional[Dict], Optional[
         user_repr = extract_user_info(request)
         journal_repr = extract_journal_info(request)
         return user_repr, journal_repr
-    except Exception as exc:
-        logger.debug("Failed to extract required data from request: %s", exc)
+    except Exception as exception:
+        logger.exception(exception)
+        logger.error("Failed to extract required user or journal data from request.", )
         return None, None
 
 def extract_filtered_headers(request, allowed_headers=None) -> Dict:
