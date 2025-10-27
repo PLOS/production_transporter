@@ -53,14 +53,14 @@ class FileTransporter:
         """
         Main function to collect and send article files
         """
-        if not self.settings.transport_enabled:
+        if not self.settings.transport_enabled and isinstance(self.request, WSGIRequest):
             logger.debug("Transport disabled")
-            # if self.show_notifications:
-            #     messages.add_message(
-            #             self.request,
-            #             messages.INFO,
-            #             'Production deposit is in your workflow but FTP transport is disabled for this journal.',
-            #     )
+            if self.show_notifications:
+                messages.add_message(
+                        self.request,
+                        messages.INFO,
+                        'Production deposit is in your workflow but FTP transport is disabled for this journal.',
+                )
             return False
 
         preparers: List[FilePreparer] = self.get_files_to_send()
