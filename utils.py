@@ -1,55 +1,84 @@
-from typing import Tuple
 from plugins.production_transporter.file_transport.file_transporter import FileTransporter
 from plugins.production_transporter.utilities import data_fetch
 from plugins.production_transporter.utilities.settings import ProductionTransporterSettings
 from submission import models as submission_models
+from typing import Tuple, Optional, Dict
 from utils.logger import get_logger
 from django_tasks import task
 
 logger = get_logger(__name__)
 
 
-def verify_request_has_required_data(request) -> Tuple:
-    """Verify that the request has the required data for serialization."""
+def extract_user_info(request) -> Optional[Dict]:
+    """Extract minimal user data from the request."""
+    user = getattr(request, "user", None)
+    if user:
+        return {"id": user.id, "username": user.username, "email": user.email}
+    return None
+
+
+def extract_journal_info(request) -> Optional[Dict]:
+    """Extract minimal journal data from the request."""
+    journal = getattr(request, "journal", None)
+    if journal:
+        return {"code": journal.code}
+    return None
+
+
+def verify_request_has_required_data(request) -> Tuple[Optional[Dict], Optional[Dict]]:
+    """
+    Verify and extract essential request data for serialization.
+
+    Returns:
+        Tuple of (user_repr, journal_repr), where each may be None
+        if not present or valid.
+    """
     try:
-        user = getattr(request, "user", None)
-        user_repr = (
-            {"id": user.id, "username": user.username, "email": user.email}
-            if user and user.is_authenticated
-            else None
-        )
-        journal = getattr(request, "journal", None)
-        journal_repr = (
-            {"code": journal.code}
-            if journal
-            else None
-        )
+        user_repr = extract_user_info(request)
+        journal_repr = extract_journal_info(request)
         return user_repr, journal_repr
-    except Exception:
-        logger.debug("Request missing required data")
+    except Exception as exc:
+        logger.debug("Failed to extract required data from request: %s", exc)
         return None, None
 
-def serialize_request(request):
-    """Return a simplified, serializable version of a Django WSGIRequest for use in background tasks."""
+def extract_filtered_headers(request, allowed_headers=None) -> Dict:
+    """
+    Extract a subset of headers from a Django request.
+    :param request: Django's WSGIRequest
+    :param request: list[str] of allowed header names (case-insensitive)
+
+    Returns:
+    A dictionary containing only the allowed headers.
+    """
+    if allowed_headers is None:
+        allowed_headers = ["user-agent", "referer", "accept", "content-type"]
+
+    filtered_headers = {}
+    for header_name, header_value in request.headers.items():
+        if header_name.lower() in allowed_headers:
+            filtered_headers[header_name] = header_value
+
+    return filtered_headers
+
+def serialize_request(request) -> Dict:
+    """
+    Return a simplified, serializable version of a Django WSGIRequest suitable for background tasks.
+    """
     user_repr, journal_repr = verify_request_has_required_data(request)
 
     return {
-            "method": request.method,
-            "path": request.path,
-            "full_path": request.get_full_path(),
-            "remote_addr": request.META.get("REMOTE_ADDR"),
-            "host": request.get_host(),
-            "content_type": request.META.get("CONTENT_TYPE"),
-            "query_params": dict(request.GET),
-            "post_data": dict(request.POST) if request.method == "POST" else None,
-            "user": user_repr,
-            "journal": journal_repr,
-            "headers": {
-                k: v
-                for k, v in request.headers.items()
-                if k.lower() in ["user-agent", "referer", "accept", "content-type"]
-            },
-        }
+        "method": request.method,
+        "path": request.path,
+        "full_path": request.get_full_path(),
+        "remote_addr": request.META.get("REMOTE_ADDR"),
+        "host": request.get_host(),
+        "content_type": request.META.get("CONTENT_TYPE"),
+        "query_params": dict(request.GET),
+        "post_data": dict(request.POST) if request.method == "POST" else None,
+        "user": user_repr,
+        "journal": journal_repr,
+        "headers": extract_filtered_headers(request),
+    }
 
 def schedule_file_transfer(request, journal_code: str, article_id: int = None, send_email: bool = True,
                            show_notifications: bool = True, ) -> None:
