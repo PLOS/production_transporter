@@ -4,6 +4,7 @@ A file which handles file transportation in a cleaner way.
 from typing import Tuple, List
 
 from django.contrib import messages
+from django.core.handlers.wsgi import WSGIRequest
 from janeway_ftp import ftp, sftp
 from journal.models import Journal
 from plugins.production_transporter.file_transport.file_preparer import FilePreparer, DefaultFilePreparer
@@ -67,12 +68,12 @@ class FileTransporter:
         if not preparers or len(preparers) <= 0:
             error_message = 'Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.'
             logger.error(error_message)
-            # if self.show_notifications:
-            #     messages.add_message(
-            #             self.request,
-            #             messages.ERROR,
-            #             'Failed to send article to production.',
-            #     )
+            if self.show_notifications and isinstance(self.request, WSGIRequest):
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        'Failed to send article to production.',
+                )
             return False
 
         success, error_message, exception = self.send_files(preparers)
@@ -119,12 +120,12 @@ class FileTransporter:
         if not self.settings.ftp_server or not self.settings.ftp_username or not self.settings.ftp_password:
             error_message = 'Failed to send article to production via FTP: FTP details not provided.'
             logger.error(error_message)
-            # if self.show_notifications:
-            #     messages.add_message(
-            #             self.request,
-            #             messages.ERROR,
-            #             'Failed to send article to production.',
-            #     )
+            if self.show_notifications and isinstance(self.request, WSGIRequest):
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        'Failed to send article to production.',
+                )
             return False, error_message, None
 
         for file_preparer in file_preparers:
@@ -146,12 +147,12 @@ class FileTransporter:
             error_message = f"Failed to get filepath for article (ID: {self.article.pk})."
             logger.exception(exception)
             logger.error(error_message)
-            # if self.show_notifications:
-            #     messages.add_message(
-            #             self.request,
-            #             messages.ERROR,
-            #             f"Failed to get the filepath.",
-            #     )
+            if self.show_notifications and isinstance(self.request, WSGIRequest):
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        f"Failed to get the filepath.",
+                )
             return False, error_message, exception
 
         ftp_type: str = "FTP"
@@ -166,12 +167,12 @@ class FileTransporter:
             error_message = f"Failed to send file via {ftp_type} for the file '{file_path}'."
             logger.exception(exception)
             logger.error(error_message)
-            # if self.show_notifications:
-            #     messages.add_message(
-            #             self.request,
-            #             messages.ERROR,
-            #             f"Failed to send file via {ftp_type}.",
-            #     )
+            if self.show_notifications and isinstance(self.request, WSGIRequest):
+                messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        f"Failed to send file via {ftp_type}.",
+                )
             return False, error_message, exception
 
         return True, None, None
