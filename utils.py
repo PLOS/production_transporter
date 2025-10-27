@@ -1,17 +1,16 @@
-from journal.models import Journal
+from typing import Tuple
 from plugins.production_transporter.file_transport.file_transporter import FileTransporter
 from plugins.production_transporter.utilities import data_fetch
 from plugins.production_transporter.utilities.settings import ProductionTransporterSettings
 from submission import models as submission_models
-from submission.models import Article
 from utils.logger import get_logger
 from django_tasks import task
 
 logger = get_logger(__name__)
 
 
-def serialize_request(request):
-    """Return a simplified, serializable version of a Django WSGIRequest, accessible by dot notation."""
+def verify_request_has_required_data(request) -> Tuple:
+    """Verify that the request has the required data for serialization."""
     try:
         user = getattr(request, "user", None)
         user_repr = (
@@ -25,8 +24,16 @@ def serialize_request(request):
             if journal
             else None
         )
+        return user_repr, journal_repr
+    except Exception:
+        logger.debug("Request missing required data")
+        return None, None
 
-        data = {
+def serialize_request(request):
+    """Return a simplified, serializable version of a Django WSGIRequest for use in background tasks."""
+    user_repr, journal_repr = verify_request_has_required_data(request)
+
+    return {
             "method": request.method,
             "path": request.path,
             "full_path": request.get_full_path(),
@@ -43,12 +50,6 @@ def serialize_request(request):
                 if k.lower() in ["user-agent", "referer", "accept", "content-type"]
             },
         }
-
-        # return dict_to_namespace(data)
-        return data
-
-    except Exception:
-        return None
 
 def schedule_file_transfer(request, journal_code: str, article_id: int = None, send_email: bool = True,
                            show_notifications: bool = True, ) -> None:
