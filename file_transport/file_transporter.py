@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 
 class FileTransporter:
-    def __init__(self, request, journal: Journal = None, article: Article = None, article_id: int = None,
+    def __init__(self, request, journal: Journal, article: Article = None, article_id: int = None,
                  settings: ProductionTransporterSettings = None, send_email: bool = True, show_notifications: bool = True):
         """
         Creates a file transporter to send items via FTP or SFTP.
@@ -37,8 +37,6 @@ class FileTransporter:
         if article is None:
             if article_id is None:
                 raise Exception("Must provide article or article id")
-            if not journal:
-                raise Exception("Must provide journal")
             article = data_fetch.fetch_article(journal, article_id)
             if not article:
                 raise Exception("Could not find article with id {0}".format(article_id))
