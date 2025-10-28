@@ -45,7 +45,7 @@ def verify_request_has_required_data(request) -> Tuple[Optional[Dict], Optional[
 def extract_filtered_headers(request, allowed_headers=None) -> Dict:
     """
     Extract a subset of headers from a Django request.
-    :param request: Django's WSGIRequest
+    :param request: Django's HttpRequest
     :param request: list[str] of allowed header names (case-insensitive)
 
     Returns:
@@ -63,7 +63,7 @@ def extract_filtered_headers(request, allowed_headers=None) -> Dict:
 
 def serialize_request(request) -> Dict:
     """
-    Return a simplified, serializable version of a Django WSGIRequest suitable for background tasks.
+    Return a simplified, serializable version of a Django HttpRequest suitable for background tasks.
     """
     user_repr, journal_repr = verify_request_has_required_data(request)
 

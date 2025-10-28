@@ -4,7 +4,7 @@ A file which handles file transportation in a cleaner way.
 from typing import Tuple, List
 
 from django.contrib import messages
-from django.core.handlers.wsgi import WSGIRequest
+from django.http import HttpRequest
 from janeway_ftp import ftp, sftp
 from journal.models import Journal
 from plugins.production_transporter.file_transport.file_preparer import FilePreparer, DefaultFilePreparer
@@ -51,8 +51,8 @@ class FileTransporter:
         """
         Main function to collect and send article files
         """
-        self.messages_can_be_displayed = isinstance(self.request, WSGIRequest)
-        if not self.settings.transport_enabled and self.messages_can_be_displayed:
+        self.is_in_http_context = isinstance(self.request, HttpRequest)
+        if not self.settings.transport_enabled and self.is_in_http_context:
             logger.debug("Transport disabled")
             if self.show_notifications:
                 messages.add_message(
@@ -67,7 +67,7 @@ class FileTransporter:
         if not preparers or len(preparers) <= 0:
             error_message = 'Failed to send article to production via FTP: No file paths provided. If using custom transfer functions, ensure that the functions are returning a file path.'
             logger.error(error_message)
-            if self.show_notifications and self.messages_can_be_displayed:
+            if self.show_notifications and self.is_in_http_context:
                 messages.add_message(
                         self.request,
                         messages.ERROR,
@@ -119,7 +119,7 @@ class FileTransporter:
         if not self.settings.ftp_server or not self.settings.ftp_username or not self.settings.ftp_password:
             error_message = 'Failed to send article to production via FTP: FTP details not provided.'
             logger.error(error_message)
-            if self.show_notifications and self.messages_can_be_displayed:
+            if self.show_notifications and self.is_in_http_context:
                 messages.add_message(
                         self.request,
                         messages.ERROR,
@@ -146,7 +146,7 @@ class FileTransporter:
             error_message = f"Failed to get filepath for article (ID: {self.article.pk})."
             logger.exception(exception)
             logger.error(error_message)
-            if self.show_notifications and self.messages_can_be_displayed:
+            if self.show_notifications and self.is_in_http_context:
                 messages.add_message(
                         self.request,
                         messages.ERROR,
@@ -166,7 +166,7 @@ class FileTransporter:
             error_message = f"Failed to send file via {ftp_type} for the file '{file_path}'."
             logger.exception(exception)
             logger.error(error_message)
-            if self.show_notifications and self.messages_can_be_displayed:
+            if self.show_notifications and self.is_in_http_context:
                 messages.add_message(
                         self.request,
                         messages.ERROR,
