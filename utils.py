@@ -10,7 +10,13 @@ logger = get_logger(__name__)
 
 
 def extract_user_info(request) -> Optional[Dict]:
-    """Extract minimal user data from the request."""
+    """
+    Extract minimal user data from the request.
+    :param request: Django's HttpRequest
+
+    Returns:
+    A dictionary with user id, username, and email if user exists, else None.
+    """
     user = getattr(request, "user", None)
     if user:
         return {"id": user.id, "username": user.username, "email": user.email}
@@ -18,7 +24,13 @@ def extract_user_info(request) -> Optional[Dict]:
 
 
 def extract_journal_info(request) -> Optional[Dict]:
-    """Extract minimal journal data from the request."""
+    """
+    Extract minimal journal data from the request.
+    :param request: Django's HttpRequest
+
+    Returns:
+    A dictionary with journal code if journal exists, else None.
+    """
     journal = getattr(request, "journal", None)
     if journal:
         return {"code": journal.code}
@@ -28,6 +40,7 @@ def extract_journal_info(request) -> Optional[Dict]:
 def verify_request_has_required_data(request) -> Tuple[Optional[Dict], Optional[Dict]]:
     """
     Verify and extract essential request data for serialization.
+    :param request: Django's HttpRequest
 
     Returns:
         Tuple of (user_repr, journal_repr), where each may be None
@@ -46,7 +59,7 @@ def extract_filtered_headers(request, allowed_headers=None) -> Dict:
     """
     Extract a subset of headers from a Django request.
     :param request: Django's HttpRequest
-    :param request: list[str] of allowed header names (case-insensitive)
+    :param allowed_headers: list[str] of allowed header names (case-insensitive)
 
     Returns:
     A dictionary containing only the allowed headers.
@@ -64,6 +77,10 @@ def extract_filtered_headers(request, allowed_headers=None) -> Dict:
 def serialize_request(request) -> Dict:
     """
     Return a simplified, serializable version of a Django HttpRequest suitable for background tasks.
+    :param request: Django's HttpRequest
+
+    Returns:
+    A dictionary containing essential request data (useful outside of HTTP context).
     """
     user_repr, journal_repr = verify_request_has_required_data(request)
 
@@ -86,6 +103,12 @@ def schedule_file_transfer(request, journal_code: str, article_id: int = None, s
     """
     Schedules a file transfer by calling the django-task, do_file_transfer.
     Creates a serializable request that can be passed to the task queue.
+
+    :param request: Request (Django's HttpRequest) must contain the article, journal, and user making the request.
+    :param journal_code: Journal code where the article is located.
+    :param article_id: The ID of the article to transfer.
+    :param send_email: True if an email should be sent upon a successful transfer, False otherwise.
+    :param show_notifications: True if a pop-up notification should be shown (note that popups will not show if sent using a background task).
     """
     serializable_request = serialize_request(request)
     do_file_transfer.enqueue(serializable_request, journal_code, article_id=article_id, send_email=send_email,
@@ -97,11 +120,10 @@ def do_file_transfer(serializable_request, journal_code: str, article_id: int = 
     """
     Does a file transfer.
     :param serializable_request: Request must contain the article, journal, and user making the request.
-    :param journal: The journal where the article is located.
+    :param journal_code: The journal code where the article is located.
     :param article_id: The ID of the article to transfer.
-    :param article: The article to transfer.
     :param send_email: True if an email should be sent upon a successful transfer, False otherwise.
-    :param show_notifications: True if a pop-up notification should be shown.
+    :param show_notifications: True if a pop-up notification should be shown (note that popups will not show if sent using a background task).
     :return:
     """
     journal = data_fetch.fetch_journal_data(journal_code)
