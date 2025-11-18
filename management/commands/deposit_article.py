@@ -29,7 +29,7 @@ class Command(BaseCommand):
                     article.journal,
                     user,
             )
-            utils.do_file_transfer(request, article.journal, article=article, send_email=False,
-                                   show_notifications=False)
+            utils.schedule_file_transfer(request, article.journal, article=article,
+                                         send_email=False, show_notifications=False)
         except (models.Article.DoesNotExist, core_models.Account.DoesNotExist):
             exit('No article or user found with supplied IDs.')
