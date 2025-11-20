@@ -20,7 +20,6 @@ class Command(BaseCommand):
         user_id = options.get('user_id')
 
         try:
-
             article = models.Article.objects.get(
                     pk=article_id,
             )
