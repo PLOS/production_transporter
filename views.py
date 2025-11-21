@@ -181,7 +181,7 @@ def handshake_url(request):
                     pk=article_pk,
                     journal=request.journal,
             )
-            pt_utils.schedule_file_transfer(request, request.journal, article=article)
+            pt_utils.schedule_file_transfer(request, journal_code=request.journal.code, article_id=article_pk)
 
     context = {
         'articles_in_stage': articles_in_stage,
