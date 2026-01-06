@@ -19,7 +19,13 @@ def extract_user_info(request) -> Optional[Dict]:
     """
     user = getattr(request, "user", None)
     if user:
-        return {"id": user.id, "username": user.username, "email": user.email}
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name(),
+            "is_anonymous": user.is_anonymous,
+        }
     return None
 
 
@@ -83,6 +89,8 @@ def serialize_request(request) -> Dict:
     A dictionary containing essential request data (useful outside of HTTP context).
     """
     user_repr, journal_repr = verify_request_has_required_data(request)
+    site_type = getattr(request, "site_type", None)
+    site_type_repr = {"name": site_type.name} if site_type else None
 
     return {
         "method": request.method,
@@ -95,6 +103,7 @@ def serialize_request(request) -> Dict:
         "post_data": dict(request.POST) if request.method == "POST" else None,
         "user": user_repr,
         "journal": journal_repr,
+        "site_type": site_type_repr,
         "headers": extract_filtered_headers(request),
     }
 
