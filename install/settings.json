@@ -118,5 +118,140 @@
     "value": {
       "default": ""
     }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "When enabled the article (.zip) will automatically be transfered via the method set in \"Production Transfer Type\".",
+      "is_translatable": false,
+      "name": "enable_transport_custom_zip",
+      "pretty_name": "Enable Transport of Custom Files",
+      "type": "boolean"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Defines the method of file transfer.",
+      "is_translatable": false,
+      "name": "transfer_method_type",
+      "pretty_name": "Production Transfer Type",
+      "type": "select"
+    },
+    "value": {
+      "default": "ftp"
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path which returns the export .zip filepath given a journal code and article ID, in that order.",
+      "is_translatable": false,
+      "name": "file_transfer_zip_function",
+      "pretty_name": "File Transfer .zip Function",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called if .zip transfer succeeds.",
+      "is_translatable": false,
+      "name": "file_transfer_zip_success_callback",
+      "pretty_name": "File Transfer .zip Success Callback",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called if .zip transfer fails.",
+      "is_translatable": false,
+      "name": "file_transfer_zip_failure_callback",
+      "pretty_name": "File Transfer .zip Failure Callback",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Enable sending of .go.xml file.",
+      "is_translatable": false,
+      "name": "enable_transport_custom_go_xml",
+      "pretty_name": "Enable .go.xml File Sending",
+      "type": "boolean"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path which returns the export .go.xml filepath given a journal code and article ID, in that order.",
+      "is_translatable": false,
+      "name": "file_transfer_go_function",
+      "pretty_name": "File Transfer .go.xml Function",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called if .go.xml transfer succeeds.",
+      "is_translatable": false,
+      "name": "file_transfer_go_success_callback",
+      "pretty_name": "File Transfer .go.xml Success Callback",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
+  },
+  {
+    "group": {
+      "name": "plugin"
+    },
+    "setting": {
+      "description": "Python import path to a function called if .go.xml transfer fails.",
+      "is_translatable": false,
+      "name": "file_transfer_go_failure_callback",
+      "pretty_name": "File Transfer .go.xml Failure Callback",
+      "type": "char"
+    },
+    "value": {
+      "default": ""
+    }
   }
 ]

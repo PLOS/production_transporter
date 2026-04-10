@@ -1,22 +1,119 @@
 {% extends "admin/core/base.html" %}
 {% load foundation %}
-
 {% block page_title %}Production Transporter Admin{% endblock page_title %}
 {% block title %}Production Transporter Admin{% endblock %}
 
 {% block body %}
     <div class="box">
-        <div class="content">
+        <form method="POST">
+            {% csrf_token %}
             <div class="row expanded">
                 <div class="large-6 columns">
-                    <p>You can enable the Production Transporter for this journal and set the email address that will be notified when articles are deposited.</p>
-                    <form method="POST">
-                        {% csrf_token %}
-                        {{ manager_form|foundation }}
-                        <button class="button success" type="submit">Save</button>
-                    </form>
+                    <div class="title-area">
+                        <h2>General Transport Settings</h2>
+                    </div>
+                    <div class="content">
+                        <div class="row">
+                            <div class="large-12 columns">
+                                {{ manager_form.enable_transport|foundation }}
+                            </div>
+                            <div class="large-12 columns">
+                                {{ manager_form.transport_production_stage|foundation }}
+                            </div>
+                            <div class="large-12 columns">
+                                {{ manager_form.transport_production_manager|foundation }}
+                            </div>
+                            <div class="large-12 columns">
+                                {{ manager_form.transport_email_production_manager|foundation }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="large-6 columns">
+                    <div class="title-area">
+                        <h2>FTP Settings</h2>
+                    </div>
+                    <div class="content">
+                        <div class="row">
+                            <div class="large-12 columns">
+                                {{ manager_form.transfer_method_type|foundation }}
+                            </div>
+                            <div class="large-12 columns">
+                                {{ manager_form.transport_ftp_address|foundation }}
+                            </div>
+                            <div class="large-12 columns">
+                                {{ manager_form.transport_ftp_username|foundation }}
+                            </div>
+                            <div class="large-12 columns">
+                                {{ manager_form.transport_ftp_password|foundation }}
+                            </div>
+                            <div class="large-12 columns">
+                                {{ manager_form.transport_ftp_remote_path|foundation }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <!-- ZIP File Transport Settings -->
+            <div class="box">
+                <div class="row expanded">
+                    <div class="large-6 columns">
+                        <div class="title-area">
+                            <h2>.zip File Transport</h2>
+                        </div>
+                        <div class="content">
+                            <div class="row">
+                                <div class="large-12 columns">
+                                    {{ manager_form.enable_transport_custom_zip|foundation }}
+                                </div>
+                                <div class="large-12 columns">
+                                    {{ manager_form.file_transfer_zip_function|foundation }}
+                                </div>
+                                <div class="large-12 columns">
+                                    {{ manager_form.file_transfer_zip_success_callback|foundation }}
+                                </div>
+                                <div class="large-12 columns">
+                                    {{ manager_form.file_transfer_zip_failure_callback|foundation }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- .go.xml File Transport Settings -->
+                    <div class="large-6 columns">
+                        <div class="title-area">
+                            <h2>.go.xml File Transport</h2>
+                        </div>
+                        <div class="content">
+                            <div class="row">
+                                <div class="large-12 columns">
+                                    {{ manager_form.enable_transport_custom_go_xml|foundation }}
+                                </div>
+                                <div class="large-12 columns">
+                                    {{ manager_form.file_transfer_go_function|foundation }}
+                                </div>
+                                <div class="large-12 columns">
+                                    {{ manager_form.file_transfer_go_success_callback|foundation }}
+                                </div>
+                                <div class="large-12 columns">
+                                    {{ manager_form.file_transfer_go_failure_callback|foundation }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="box">
+                <div class="row expanded">
+                    <div class="large-2 columns end">
+                        <button class="button success" type="submit">Save</button>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
 {% endblock body %}

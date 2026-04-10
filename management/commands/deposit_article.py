@@ -1,10 +1,11 @@
-from django.core.management.base import BaseCommand
-
-from submission import models
 from core import models as core_models
-
-from plugins.production_transporter import utils
+from django.core.management.base import BaseCommand
 from janeway_ftp import helpers
+from plugins.production_transporter import utils
+from submission import models
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class Command(BaseCommand):
@@ -20,18 +21,18 @@ class Command(BaseCommand):
 
         try:
             article = models.Article.objects.get(
-                pk=article_id,
+                    pk=article_id,
             )
-            user = core_models.Account.objects.get(pk=user_id)
-            kwargs = {
-                'article': article,
-                'request': helpers.create_fake_request(
-                    article.journal,
-                    user,
-                )
+            journal_code = article.journal.code
+            serilizable_request_content = {
+                'user': {'id': user_id},
+                'journal': {
+                    'code': journal_code
+                },
+                'method': 'CLI',
             }
-            utils.on_article_accepted(
-                **kwargs,
-            )
+
+            utils.do_file_transfer.enqueue(serializable_request=serilizable_request_content, journal_code=journal_code, article_id=article_id,
+                                         send_email=False, show_notifications=False)
         except (models.Article.DoesNotExist, core_models.Account.DoesNotExist):
             exit('No article or user found with supplied IDs.')
