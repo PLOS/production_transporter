@@ -1,0 +1,19 @@
+trigger_pipeline_dev:
+  stage: deploy
+  script:
+    - 'curl --fail --request POST --form token=$TRIGGER_TOKEN --form ref=develop "${CI_API_V4_URL}/projects/67747905/trigger/pipeline"'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "develop"
+  environment: develop
+
+trigger_pipeline_prod:
+  stage: deploy
+  script:
+    - 'curl --fail --request POST --form token=$TRIGGER_TOKEN --form ref=main "${CI_API_V4_URL}/projects/67747905/trigger/pipeline"'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+  environment: prod
