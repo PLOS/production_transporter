@@ -1,20 +1,27 @@
 from django.contrib import messages
 from django.http import HttpRequest
 from journal.models import Journal
+from plugins.production_transporter.utilities import logger_messages
 from submission.models import Article
+from utils.logger import get_logger
 from utils.notify_helpers import send_email_with_body_from_user
 from utils.render_template import get_requestless_content
+
+logger = get_logger(__name__)
 
 
 def send_export_success_notification_email(request, journal: Journal, article: Article, production_contact_email: str):
     """Send notification email to production manager"""
 
-    if not production_contact_email and isinstance(request, HttpRequest):
-        messages.add_message(
-                request,
-                messages.WARNING,
-                'No production contact set in the Production Transporter plugin.',
-        )
+    if not production_contact_email:
+        message = logger_messages.no_production_contact_set()
+        logger.warning(message)
+        if isinstance(request, HttpRequest):
+            messages.add_message(
+                    request,
+                    messages.WARNING,
+                    message,
+            )
         return
 
     notification_context = {

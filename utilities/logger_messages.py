@@ -42,3 +42,11 @@ def process_failed_fetching_journal(janeway_journal_code: str | None = None, art
 
     return "Fetching journal from database (Code: {0}) where article (ID: {1}) lives failed. Discontinuing export process.".format(
         janeway_journal_code, article_id)
+
+
+def no_production_contact_set() -> str:
+    """
+    Gets the log message for when the plugin has no production contact configured.
+    :return: The logger message.
+    """
+    return "No production contact set in the Production Transporter plugin."

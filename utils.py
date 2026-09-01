@@ -1,3 +1,4 @@
+from core.models import Account
 from plugins.production_transporter.file_transport.file_transporter import FileTransporter
 from plugins.production_transporter.utilities import data_fetch
 from plugins.production_transporter.utilities.settings import ProductionTransporterSettings
@@ -7,6 +8,91 @@ from utils.logger import get_logger
 from django_tasks import task
 
 logger = get_logger(__name__)
+
+
+class TaskRequest:
+    """
+    Core Janeway is not designed to handle a serialized request dictionary.
+
+    The TaskRequest class is rebuilt from the dictionary produced by serialize_request().
+
+    This class exists because core Janeway isn't aware and doesn't need to be aware that
+    an HttpRequest was destructured into a dictionary for storage in Redis.
+
+    Passing this enables Janeway core to proceed as if it were a normal request
+    without having to change the core code to handle a dictionary.
+    """
+
+    def __init__(self, journal=None, user=None, method: str = "TASK", path: str = "",
+                 remote_addr: str = None):
+        self.journal = journal
+        self.site_type = journal
+        self.repository = None
+        self.user = user
+        self.method = method
+        self.path = path
+        self.FILES = None
+        self.GET = {}
+        self.POST = {}
+        self.META = {"REMOTE_ADDR": remote_addr} if remote_addr else {}
+
+    @property
+    def press(self):
+        # Journal.press queries the database, so it is resolved on demand only.
+        return self.journal.press if self.journal else None
+
+    def is_secure(self) -> bool:
+        return False
+
+
+def fetch_user(user_id) -> Optional[Account]:
+    """
+    Look up the account that scheduled the transfer.
+    :param user_id: The primary key of the account, as stored by serialize_request.
+
+    Returns:
+    The Account, or None if no usable ID was supplied or the account cannot be found.
+    """
+    if not user_id:
+        return None
+
+    try:
+        return Account.objects.filter(pk=user_id).first()
+    except (TypeError, ValueError):
+        logger.error(f"Could not fetch the user with the ID '{user_id}'.")
+        return None
+
+
+def deserialize_request(serialized_request, journal=None) -> TaskRequest:
+    """
+    Rebuild a request-like object from the dictionary created by serialize_request().
+    :param serialized_request: The serialized request dictionary taken off the task queue.
+    :param journal: The journal the task is running for, if it has already been fetched.
+
+    Returns:
+    A TaskRequest carrying the journal and user that Janeway's notification
+    service needs, or the original object if it is already request-like.
+    """
+    if serialized_request is None:
+        serialized_request = {}
+    elif not isinstance(serialized_request, dict):
+        # A real HttpRequest (or an existing stand-in) was passed through.
+        return serialized_request
+
+    if journal is None:
+        journal_data = serialized_request.get("journal") or {}
+        journal = data_fetch.fetch_journal_data(journal_data.get("code"))
+
+    user_data = serialized_request.get("user") or {}
+    user = None if user_data.get("is_anonymous") else fetch_user(user_data.get("id"))
+
+    return TaskRequest(
+        journal=journal,
+        user=user,
+        method=serialized_request.get("method") or "TASK",
+        path=serialized_request.get("path") or "",
+        remote_addr=serialized_request.get("remote_addr"),
+    )
 
 
 def extract_user_info(request) -> Optional[Dict]:
@@ -136,7 +222,12 @@ def do_file_transfer(serialized_request, journal_code: str, article_id: int = No
     :return:
     """
     journal = data_fetch.fetch_journal_data(journal_code)
-    file_transporter: FileTransporter = FileTransporter(request=serialized_request, journal=journal,
+    # The queue can only carry plain data, so the request arrives here as the
+    # dict that serialize_request() built. Janeway's notification service reads
+    # it by attribute (request.journal, request.user, request.site_type), so it
+    # has to be rebuilt before the transfer can email the production contact.
+    request = deserialize_request(serialized_request, journal=journal)
+    file_transporter: FileTransporter = FileTransporter(request=request, journal=journal,
                                                         article_id=article_id, send_email=send_email,
                                                         show_notifications=show_notifications)
     file_transporter.collect_and_send_article()
