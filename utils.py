@@ -119,16 +119,16 @@ def schedule_file_transfer(request, journal_code: str, article_id: int = None, s
     :param send_email: True if an email should be sent upon a successful transfer, False otherwise.
     :param show_notifications: True if a pop-up notification should be shown (note that popups will not show if sent using a background task).
     """
-    serializable_request = serialize_request(request)
-    do_file_transfer.enqueue(serializable_request, journal_code, article_id=article_id, send_email=send_email,
+    serialized_request = serialize_request(request)
+    do_file_transfer.enqueue(serialized_request, journal_code, article_id=article_id, send_email=send_email,
                              show_notifications=show_notifications)
 
 @task()
-def do_file_transfer(serializable_request, journal_code: str, article_id: int = None, send_email: bool = True,
+def do_file_transfer(serialized_request, journal_code: str, article_id: int = None, send_email: bool = True,
                      show_notifications: bool = True, ) -> None:
     """
     Does a file transfer.
-    :param serializable_request: Request must contain the article, journal, and user making the request.
+    :param serialized_request: The request as flattened by serialize_request() before this job was enqueued.
     :param journal_code: The journal code where the article is located.
     :param article_id: The ID of the article to transfer.
     :param send_email: True if an email should be sent upon a successful transfer, False otherwise.
@@ -136,7 +136,7 @@ def do_file_transfer(serializable_request, journal_code: str, article_id: int = 
     :return:
     """
     journal = data_fetch.fetch_journal_data(journal_code)
-    file_transporter: FileTransporter = FileTransporter(request=serializable_request, journal=journal,
+    file_transporter: FileTransporter = FileTransporter(request=serialized_request, journal=journal,
                                                         article_id=article_id, send_email=send_email,
                                                         show_notifications=show_notifications)
     file_transporter.collect_and_send_article()
